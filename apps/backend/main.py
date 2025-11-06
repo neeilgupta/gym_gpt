@@ -1,6 +1,10 @@
 from fastapi import FastAPI
+from routes import plans  # <-- THIS is the missing import
 
 app = FastAPI(title="GymGPT API")
+
+# mount the /plans endpoints
+app.include_router(plans.router, prefix="/plans", tags=["plans"])
 
 @app.get("/health")
 def health():

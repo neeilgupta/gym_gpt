@@ -15,13 +15,13 @@ See API documentation at: http://localhost:8000/docs
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import plans
+from routes import plans, logs
 
 # Initialize FastAPI application with metadata
 app = FastAPI(
     title="GymGPT",
     version="0.1.0",
-    description="AI-powered workout planning API with equipment and soreness adaptation"
+    description="AI-powered workout planning API with equipment adaptation and exercise logging"
 )
 
 # Configure CORS middleware for development
@@ -42,5 +42,6 @@ def health():
     """
     return {"ok": True}
 
-# Mount the workout planning routes under /plans
+# Mount the API routes
 app.include_router(plans.router, prefix="/plans", tags=["plans"])
+app.include_router(logs.router, prefix="/logs", tags=["logs"])

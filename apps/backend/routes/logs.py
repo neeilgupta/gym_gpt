@@ -31,13 +31,30 @@ def get_logs():
     """Retrieve all stored exercise logs."""
     return LOGS
 
-@router.post("/")
-def add_log(log: ExerciseLog):
-    """Add a new exercise log entry.
-    
-    If timestamp is not provided, current time will be used.
-    """
-    if not log.timestamp:
-        log.timestamp = datetime.now()
-    LOGS.append(log)
-    return {"added": log}
+from fastapi import APIRouter, Query
+from pydantic import BaseModel
+from ..services.db import add_log, get_logs, init_db
+from typing import Optional
+
+router = APIRouter()
+init_db()
+
+class Log(BaseModel):
+    name: str
+    reps: int
+    weight_kg: float
+    rir: int
+    focus: Optional[str] = None
+
+class LogResponse(Log):
+    id: int
+    timestamp: str
+
+@router.post("/", response_model=dict)
+def add(log: Log):
+    added = add_log(log.name, log.reps, log.weight_kg, log.rir, log.focus)
+    return {"added": added}
+
+@router.get("/")
+def all_logs(focus: Optional[str] = Query(None, description="Filter logs by focus (upper/lower/full)")):
+    return get_logs(focus)

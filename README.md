@@ -2,6 +2,10 @@
 
 ## Logs API
 
+### Persistent Logging
+
+Logs are stored in `data/gymgpt.db` using SQLite for persistence between server restarts.
+
 ### POST /logs
 Add a new set entry:
 ```json
@@ -10,12 +14,25 @@ Add a new set entry:
   "reps": 8,
   "weight_kg": 70,
   "rir": 2,
-  "focus": "upper"  // optional
+  "focus": "upper"  // optional: upper/lower/full
+}
+```
+Response:
+```json
+{
+  "added": {
+    "id": 1,
+    "name": "Bench Press",
+    "reps": 8,
+    "weight_kg": 70,
+    "rir": 2,
+    "focus": "upper",
+    "timestamp": "2025-11-07T23:01:54.749924"
+  }
 }
 ```
 
 ### GET /logs
-Returns all stored logs (in-memory for now).
+Returns all stored logs.
 
-## Next Steps
-Future versions will store logs in SQLite and automatically feed them into progressive overload logic.
+Optional query parameter: `?focus=upper` to filter logs by focus (upper/lower/full).

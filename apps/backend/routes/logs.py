@@ -33,7 +33,7 @@ def get_logs():
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
-from ..services.db import add_log, get_logs, init_db
+from services.db import add_log, get_logs, init_db
 from typing import Optional
 
 router = APIRouter()

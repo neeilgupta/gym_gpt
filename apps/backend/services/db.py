@@ -1,50 +1,137 @@
-import sqlite3, os
+# apps/backend/services/db.py
+from __future__ import annotations
+import sqlite3
+from pathlib import Path
+from typing import Optional, Dict, List
+from datetime import datetime, timedelta
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "../../data/gymgpt.db")
+# .../apps/backend/services/db.py -> data/gymgpt.db
+DB_DIR = (Path(__file__).resolve().parent / ".." / ".." / "data").resolve()
+DB_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DB_DIR / "gymgpt.db"
 
-def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS logs(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        reps INTEGER,
-        weight_kg REAL,
-        rir INTEGER,
-        focus TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    """)
-    conn.commit()
-    conn.close()
+def _conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    # light concurrency safety + durability for dev
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
 
-def add_log(name: str, reps: int, weight_kg: float, rir: int, focus: str = None):
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute(
-        "INSERT INTO logs(name, reps, weight_kg, rir, focus) VALUES (?,?,?,?,?)", 
-        (name, reps, weight_kg, rir, focus)
-    )
-    id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-    row = conn.execute(
-        "SELECT id, name, reps, weight_kg, rir, focus, timestamp FROM logs WHERE id = ?",
-        (id,)
-    ).fetchone()
-    conn.commit()
-    conn.close()
-    return dict(zip(["id", "name", "reps", "weight_kg", "rir", "focus", "timestamp"], row))
-
-def get_logs(focus: str = None):
-    conn = sqlite3.connect(DB_PATH)
-    if focus:
-        cur = conn.execute(
-            "SELECT id, name, reps, weight_kg, rir, focus, timestamp FROM logs WHERE focus = ? ORDER BY id DESC",
-            (focus,)
+def init_db() -> None:
+    with _conn() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS logs(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                reps INTEGER NOT NULL,
+                weight_kg REAL NOT NULL,
+                rir INTEGER NOT NULL,
+                focus TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """
         )
-    else:
-        cur = conn.execute(
-            "SELECT id, name, reps, weight_kg, rir, focus, timestamp FROM logs ORDER BY id DESC"
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_logs_name_time ON logs(name, timestamp);"
         )
-    rows = cur.fetchall()
-    conn.close()
-    return [dict(zip(["id", "name", "reps", "weight_kg", "rir", "focus", "timestamp"], r)) for r in rows]
+
+def add_log(
+    name: str,
+    reps: int,
+    weight_kg: float,
+    rir: int,
+    focus: Optional[str] = None,
+) -> Dict:
+    with _conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO logs(name, reps, weight_kg, rir, focus) VALUES (?,?,?,?,?)",
+            (name, reps, weight_kg, rir, focus),
+        )
+        log_id = cur.lastrowid
+        row = conn.execute(
+            "SELECT id, name, reps, weight_kg, rir, focus, timestamp FROM logs WHERE id = ?",
+            (log_id,),
+        ).fetchone()
+        return dict(row)
+
+def get_logs(focus: Optional[str] = None) -> List[Dict]:
+    with _conn() as conn:
+        if focus:
+            cur = conn.execute(
+                """
+                SELECT id, name, reps, weight_kg, rir, focus, timestamp
+                FROM logs
+                WHERE focus = ?
+                ORDER BY id DESC
+                """,
+                (focus,),
+            )
+        else:
+            cur = conn.execute(
+                """
+                SELECT id, name, reps, weight_kg, rir, focus, timestamp
+                FROM logs
+                ORDER BY id DESC
+                """
+            )
+        return [dict(r) for r in cur.fetchall()]
+
+def get_recent_sets_map(days: int = 14) -> Dict[str, List[Dict]]:
+    """
+    Returns: { exercise_name: [ {reps, weight_kg, rir, timestamp}, ... ] }
+    Only entries within last `days`.
+    """
+    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    out: Dict[str, List[Dict]] = {}
+    with _conn() as conn:
+        cur = conn.execute(
+            """
+            SELECT name, reps, weight_kg, rir, timestamp
+            FROM logs
+            WHERE timestamp >= ?
+            ORDER BY timestamp DESC
+            """,
+            (since,),
+        )
+        for r in cur.fetchall():
+            d = dict(r)
+            out.setdefault(d["name"], []).append(
+                {
+                    "reps": d["reps"],
+                    "weight_kg": d["weight_kg"],
+                    "rir": d["rir"],
+                    "timestamp": d["timestamp"],
+                }
+            )
+    return out
+
+def get_latest_by_exercise(limit_per_exercise: int = 3) -> Dict[str, List[Dict]]:
+    """
+    Top-N latest sets for each exercise (useful if you don't want a date window).
+    """
+    with _conn() as conn:
+        # SQLite doesn't have DISTINCT ON; emulate via window function in newer versions
+        # fallback: simple group in Python
+        cur = conn.execute(
+            """
+            SELECT name, reps, weight_kg, rir, timestamp
+            FROM logs
+            ORDER BY name ASC, timestamp DESC
+            """
+        )
+        tmp: Dict[str, List[Dict]] = {}
+        for r in cur.fetchall():
+            d = dict(r)
+            bucket = tmp.setdefault(d["name"], [])
+            if len(bucket) < limit_per_exercise:
+                bucket.append(
+                    {
+                        "reps": d["reps"],
+                        "weight_kg": d["weight_kg"],
+                        "rir": d["rir"],
+                        "timestamp": d["timestamp"],
+                    }
+                )
+        return tmp

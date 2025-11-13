@@ -12,6 +12,8 @@ from typing import Dict, List, Optional, Literal
 from services.nlp import parse_soreness
 from services.planner import build_workout_plan, build_week_plan
 from services.db import get_recent_sets_map  # <-- NEW
+from services.llm import explain_workout
+
 
 router = APIRouter()
 
@@ -81,8 +83,15 @@ def workout(req: WorkoutRequest):
     """
     soreness = parse_soreness(req.soreness_text or "")
     last = _db_last_log_if_needed(req.last_log, req.use_db_logs)
-    return build_workout_plan(req.focus, last, soreness, req.equipment)
+    plan = build_workout_plan(req.focus, last, soreness, req.equipment)
+    # Optionally guard this so tests don't require an API key:
+    try:
+        plan["explanation"] = explain_workout(plan)
+    except Exception:
+        # Fail open: still return the plan even if LLM borks
+        plan["explanation"] = None
 
+        return plan
 @router.post("/week")
 def week(req: WeekRequest):
     """

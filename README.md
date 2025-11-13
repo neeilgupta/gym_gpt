@@ -36,3 +36,13 @@ Response:
 Returns all stored logs.
 
 Optional query parameter: `?focus=upper` to filter logs by focus (upper/lower/full).
+
+## Backend Quickstart
+
+### 1. Setup
+
+```bash
+cd apps/backend
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt

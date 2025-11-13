@@ -36,9 +36,7 @@ app.add_middleware(
 @app.get("/health")
 def health():
     """Basic health check endpoint.
-    
-    Returns:
-        dict: Simple status indicator
+            dict: Simple status indicator
     """
     return {"ok": True}
 

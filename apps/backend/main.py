@@ -13,9 +13,17 @@ Available endpoints:
 See API documentation at: http://localhost:8000/docs
 """
 
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import plans, logs
+
 
 # Initialize FastAPI application with metadata
 app = FastAPI(

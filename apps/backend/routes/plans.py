@@ -91,7 +91,7 @@ def workout(req: WorkoutRequest):
         # Fail open: still return the plan even if LLM borks
         plan["explanation"] = None
 
-        return plan
+    return plan
 @router.post("/week")
 def week(req: WeekRequest):
     """

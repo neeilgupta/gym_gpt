@@ -36,6 +36,20 @@ def init_db() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_logs_name_time ON logs(name, timestamp);"
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS plans(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                title TEXT NOT NULL,
+                input_json TEXT NOT NULL,
+                output_json TEXT NOT NULL
+            );
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_plans_created_at ON plans(created_at);"
+        )
 
 def add_log(
     name: str,
@@ -135,3 +149,41 @@ def get_latest_by_exercise(limit_per_exercise: int = 3) -> Dict[str, List[Dict]]
                     }
                 )
         return tmp
+def add_plan(title: str, input_json: str, output_json: str) -> Dict:
+    with _conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO plans(title, input_json, output_json) VALUES (?,?,?)",
+            (title, input_json, output_json),
+        )
+        plan_id = cur.lastrowid
+        row = conn.execute(
+            "SELECT id, created_at, title, input_json, output_json FROM plans WHERE id = ?",
+            (plan_id,),
+        ).fetchone()
+        return dict(row)
+
+def list_plans(limit: int = 20, offset: int = 0) -> List[Dict]:
+    with _conn() as conn:
+        cur = conn.execute(
+            """
+            SELECT id, created_at, title
+            FROM plans
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (limit, offset),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+def get_plan(plan_id: int) -> Optional[Dict]:
+    with _conn() as conn:
+        row = conn.execute(
+            """
+            SELECT id, created_at, title, input_json, output_json
+            FROM plans
+            WHERE id = ?
+            """,
+            (plan_id,),
+        ).fetchone()
+        return dict(row) if row else None
+

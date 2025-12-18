@@ -20,10 +20,6 @@ yarn install
 bun install
 ```
 
-Notes
--+- Requires Node 18+ (Node 20 recommended). You can use `nvm` or `brew install node@20` on macOS.
-- The frontend reads the backend URL from the `API_BASE` environment variable. By default it points to `http://127.0.0.1:8002` in `nuxt.config.ts`.
-
 ## Development Server
 
 Start the development server on `http://localhost:3000`:

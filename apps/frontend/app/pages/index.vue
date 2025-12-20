@@ -1,17 +1,37 @@
 <template>
-  <div
-    style="
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:#020617;
-      color:#e5e7eb;
-      font-family:system-ui;
-    "
-  >
-    <h1 style="font-size:2rem;font-weight:600;">
-      GymGPT app/ page ✅
-    </h1>
+  <div style="padding: 20px; font-family: system-ui;">
+    <h1>GymGPT</h1>
+
+    <button @click="test" :disabled="loading" style="padding: 10px 14px;">
+      {{ loading ? "Loading..." : "Test GET /plans" }}
+    </button>
+
+    <p v-if="error" style="color: red; margin-top: 12px;">{{ error }}</p>
+
+    <pre style="margin-top: 12px; white-space: pre-wrap;">{{ data }}</pre>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import { usePlans } from "../../composables/usePlans";
+
+const { listPlans } = usePlans();
+
+const loading = ref(false);
+const error = ref<string | null>(null);
+const data = ref<any>(null);
+
+async function test() {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    data.value = await listPlans();
+  } catch (e: any) {
+    error.value = e?.data?.detail ?? e?.message ?? String(e);
+  } finally {
+    loading.value = false;
+  }
+}
+</script>

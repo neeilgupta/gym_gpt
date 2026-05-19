@@ -1,11 +1,15 @@
-<script setup>
+<script setup lang="ts">
 import { useAuth } from "../../composables/useAuth"
 
 const { me, logout } = useAuth()
-const user = useState('user', () => null)
+const user = useState<{ id: number; email: string } | null>('user', () => null)
 
 onMounted(async () => {
-  user.value = await me()
+  try {
+    user.value = await me()
+  } catch {
+    user.value = null
+  }
 })
 
 async function handleLogout() {
@@ -13,41 +17,45 @@ async function handleLogout() {
   user.value = null
   navigateTo('/login')
 }
+
+function userInitial(email: string) {
+  return email[0].toUpperCase()
+}
 </script>
 
 <template>
   <header class="nav">
     <div class="nav-inner">
-      <NuxtLink to="/" class="wordmark">Lyft<span class="accent">Logic</span></NuxtLink>
+      <NuxtLink to="/" class="wordmark">
+        <svg class="logo-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 2L14 13H2L8 2Z" fill="currentColor" fill-opacity="0.9"/>
+        </svg>
+        lyft<span class="dot">·</span>logic
+      </NuxtLink>
 
       <nav class="nav-links">
+        <NuxtLink to="/plans" class="nav-link">Plans</NuxtLink>
         <NuxtLink to="/generate" class="nav-link">Generate</NuxtLink>
         <NuxtLink to="/nutrition" class="nav-link">Nutrition</NuxtLink>
-        <NuxtLink to="/roadmap" class="nav-link">Roadmap</NuxtLink>
+        <NuxtLink to="/settings" class="nav-link">Settings</NuxtLink>
 
         <template v-if="user">
-          <span class="nav-email">{{ user.email }}</span>
-          <NuxtLink to="/settings" class="nav-link">Settings</NuxtLink>
-          <button class="nav-signout" @click="handleLogout">Sign out</button>
+          <button class="avatar-btn" @click="handleLogout" :title="`Sign out (${user.email})`">
+            {{ userInitial(user.email) }}
+          </button>
         </template>
-        <NuxtLink v-else to="/login" class="nav-sign-in">Sign in</NuxtLink>
-
-        <NuxtLink to="/plans" class="nav-plans-icon" title="My Plans">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 21C20 19.6044 20 18.9067 19.8278 18.3389C19.44 17.0605 18.4395 16.06 17.1611 15.6722C16.5933 15.5 15.8956 15.5 14.5 15.5H9.5C8.10444 15.5 7.40665 15.5 6.83886 15.6722C5.56045 16.06 4.56004 17.0605 4.17224 18.3389C4 18.9067 4 19.6044 4 21M16.5 7.5C16.5 9.98528 14.4853 12 12 12C9.51472 12 7.5 9.98528 7.5 7.5C7.5 5.01472 9.51472 3 12 3C14.4853 3 16.5 5.01472 16.5 7.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </NuxtLink>
+        <NuxtLink v-else to="/login" class="nav-signin">Sign in</NuxtLink>
       </nav>
     </div>
   </header>
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
 
 .nav {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: #090907;
+  background: rgba(10, 10, 10, 0.95);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -62,39 +70,44 @@ async function handleLogout() {
   height: 54px;
   display: flex;
   align-items: center;
-  gap: 0;
   box-sizing: border-box;
 }
 
 .wordmark {
-  font-family: 'Syne', sans-serif;
-  font-size: 19px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   text-decoration: none;
-  color: #f0ede6;
+  color: #ffffff;
   flex-shrink: 0;
 }
 
-.accent {
-  color: #7c3aed;
+.logo-icon {
+  color: rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+.dot {
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 400;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 24px;
   margin-left: auto;
-  flex-wrap: nowrap;
 }
 
 .nav-link {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: rgba(240, 237, 230, 0.45);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
   text-decoration: none;
   transition: color 0.15s;
   white-space: nowrap;
@@ -102,76 +115,42 @@ async function handleLogout() {
 
 .nav-link:hover,
 .nav-link.router-link-active {
-  color: #f0ede6;
+  color: #ffffff;
 }
 
-.nav-email {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  color: rgba(240, 237, 230, 0.3);
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.nav-signout {
-  background: none;
-  border: 1px solid rgba(124, 58, 237, 0.25);
-  color: rgba(124, 58, 237, 0.7);
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-  white-space: nowrap;
-}
-
-.nav-signout:hover {
-  border-color: #7c3aed;
-  color: #7c3aed;
-}
-
-.nav-sign-in {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #7c3aed;
+.nav-signin {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  opacity: 0.75;
-  transition: opacity 0.15s;
-  white-space: nowrap;
+  transition: color 0.15s;
 }
 
-.nav-sign-in:hover {
-  opacity: 1;
+.nav-signin:hover {
+  color: #ffffff;
 }
 
-.nav-plans-icon {
+.avatar-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid rgba(124, 58, 237, 0.25);
-  border-radius: 3px;
-  background: rgba(124, 58, 237, 0.04);
-  text-decoration: none;
-  color: rgba(124, 58, 237, 0.6);
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: background 0.15s;
   flex-shrink: 0;
 }
 
-.nav-plans-icon:hover {
-  border-color: #7c3aed;
-  color: #7c3aed;
-  background: rgba(124, 58, 237, 0.08);
+.avatar-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 @media (max-width: 768px) {
@@ -182,8 +161,10 @@ async function handleLogout() {
   .nav-links {
     gap: 14px;
   }
+}
 
-  .nav-email {
+@media (max-width: 520px) {
+  .nav-link:not(:first-child):not(:last-child) {
     display: none;
   }
 }

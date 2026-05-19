@@ -16,9 +16,15 @@ EMAIL_VERIFICATION_EXPIRY_HOURS = int(os.getenv("EMAIL_VERIFICATION_EXPIRY_HOURS
 PASSWORD_RESET_EXPIRY_HOURS = int(os.getenv("PASSWORD_RESET_EXPIRY_HOURS", "1"))
 
 # .../apps/backend/services/db.py -> data/gymgpt.db
-DB_DIR = (Path(__file__).resolve().parent / ".." / ".." / "data").resolve()
-DB_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DB_DIR / "gymgpt.db"
+# DB_PATH env var allows Railway persistent volume override (e.g. /data/gymgpt.db)
+_db_path_env = os.getenv("DB_PATH")
+if _db_path_env:
+    DB_PATH = Path(_db_path_env)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+else:
+    DB_DIR = (Path(__file__).resolve().parent / ".." / ".." / "data").resolve()
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+    DB_PATH = DB_DIR / "gymgpt.db"
 
 def _conn() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)

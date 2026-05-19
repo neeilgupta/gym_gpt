@@ -21,6 +21,7 @@ from services.db import (
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from deps import get_optional_current_user, get_current_user
+from routes.dependencies import plan_rate_limit
 from models.plans import (
     GeneratePlanRequest,
     GeneratePlanResponse,
@@ -111,7 +112,7 @@ Output requirements:
 
 
 @router.post("/generate")
-def generate_plan(req: GeneratePlanRequest, user=Depends(get_optional_current_user)):
+def generate_plan(req: GeneratePlanRequest, user=Depends(get_optional_current_user), _=Depends(plan_rate_limit)):
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     # Use JSON schema guidance via response_format with strict JSON

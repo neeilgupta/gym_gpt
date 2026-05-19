@@ -15,9 +15,15 @@ _DEV_EMAIL_LIMIT = 15
 _ip_times: dict[str, list[float]] = defaultdict(list)
 _email_times: dict[str, list[float]] = defaultdict(list)
 
+_PLAN_WINDOW_SECONDS = 60 * 60  # 1 hour
+_PROD_PLAN_IP_LIMIT = 10
+_DEV_PLAN_IP_LIMIT = 100
 
-def _prune(timestamps: list[float], now: float) -> None:
-    cutoff = now - _WINDOW_SECONDS
+_plan_ip_times: dict[str, list[float]] = defaultdict(list)
+
+
+def _prune(timestamps: list[float], now: float, window: float = _WINDOW_SECONDS) -> None:
+    cutoff = now - window
     timestamps[:] = [t for t in timestamps if t >= cutoff]
 
 
@@ -41,7 +47,7 @@ async def otp_rate_limit(request: Request) -> None:
     ip = (request.client.host or "") if request.client else ""
     ip_limit, email_limit = _limits()
 
-    _prune(_ip_times[ip], now)
+    _prune(_ip_times[ip], now, _WINDOW_SECONDS)
     if len(_ip_times[ip]) >= ip_limit:
         raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
     # Count this attempt against the IP budget now, before the email check.
@@ -56,10 +62,27 @@ async def otp_rate_limit(request: Request) -> None:
         email = ""
 
     if email:
-        _prune(_email_times[email], now)
+        _prune(_email_times[email], now, _WINDOW_SECONDS)
         if len(_email_times[email]) >= email_limit:
             raise HTTPException(
                 status_code=429,
                 detail="Too many requests for this email. Try again later.",
             )
         _email_times[email].append(now)
+
+
+async def plan_rate_limit(request: Request) -> None:
+    """Sliding-window rate limiter for plan generation.
+
+    Enforces:
+      - production: 10 generations per IP per hour
+      - dev/local: 100 per IP per hour
+    """
+    now = time.monotonic()
+    ip = (request.client.host or "") if request.client else ""
+    limit = _PROD_PLAN_IP_LIMIT if os.getenv("ENV") == "production" else _DEV_PLAN_IP_LIMIT
+
+    _prune(_plan_ip_times[ip], now, _PLAN_WINDOW_SECONDS)
+    if len(_plan_ip_times[ip]) >= limit:
+        raise HTTPException(status_code=429, detail="Plan generation limit reached. Try again later.")
+    _plan_ip_times[ip].append(now)

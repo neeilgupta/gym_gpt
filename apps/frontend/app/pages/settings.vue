@@ -166,22 +166,22 @@ async function onDeleteAccount() {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 :global(html),
 :global(body) {
-  background: #090907;
+  background: #0a0a0a;
   margin: 0;
 }
 
 :global(#__nuxt) {
-  background: #090907;
+  background: #0a0a0a;
   min-height: 100vh;
 }
 
 .settings-page {
-  background-color: #090907;
-  color: #f0ede6;
+  background: #0a0a0a;
+  color: #ffffff;
   padding: 40px 48px;
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
@@ -202,41 +202,40 @@ async function onDeleteAccount() {
 }
 
 .page-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0 0 6px;
-  color: #f0ede6;
+  color: #ffffff;
 }
 
 .page-sub {
   font-family: 'DM Mono', monospace;
   font-size: 12px;
-  color: rgba(240, 237, 230, 0.4);
+  color: rgba(255, 255, 255, 0.35);
   margin: 0;
   letter-spacing: 0.02em;
 }
 
 .ll-card {
-  background: #111110;
+  background: #111111;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-left: 3px solid rgba(124, 58, 237, 0.4);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 22px 20px;
 }
 
 .ll-card--danger {
-  border-left-color: rgba(248, 113, 113, 0.5);
+  border-color: rgba(248, 113, 113, 0.15);
 }
 
 .card-heading {
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(240, 237, 230, 0.4);
+  color: rgba(255, 255, 255, 0.3);
   margin-bottom: 18px;
 }
 
@@ -256,7 +255,7 @@ async function onDeleteAccount() {
 .info-label {
   font-family: 'DM Mono', monospace;
   font-size: 11px;
-  color: rgba(240, 237, 230, 0.4);
+  color: rgba(255, 255, 255, 0.35);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   min-width: 120px;
@@ -264,7 +263,7 @@ async function onDeleteAccount() {
 
 .info-value {
   font-size: 13px;
-  color: #f0ede6;
+  color: #ffffff;
 }
 
 .info-badge {
@@ -276,15 +275,15 @@ async function onDeleteAccount() {
 }
 
 .info-badge--ok {
-  background: rgba(52, 211, 153, 0.1);
-  color: #6ee7b7;
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  background: rgba(74, 222, 128, 0.08);
+  color: #86efac;
+  border: 1px solid rgba(74, 222, 128, 0.15);
 }
 
 .info-badge--warn {
   background: rgba(251, 191, 36, 0.08);
   color: #fcd34d;
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.15);
 }
 
 /* Forms */
@@ -306,26 +305,25 @@ async function onDeleteAccount() {
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(240, 237, 230, 0.4);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .form-input {
   padding: 10px 14px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #191917;
-  color: #f0ede6;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
   box-sizing: border-box;
   width: 100%;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.07);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .form-input:disabled {
@@ -334,23 +332,24 @@ async function onDeleteAccount() {
 }
 
 .action-button {
-  background: #7c3aed;
-  border: none;
-  border-radius: 3px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 6px;
   color: #ffffff;
   font-family: 'DM Mono', monospace;
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  padding: 11px 22px;
+  padding: 10px 22px;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
   width: fit-content;
 }
 
 .action-button:hover:not(:disabled) {
-  background: #6d28d9;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .action-button:disabled {
@@ -359,8 +358,7 @@ async function onDeleteAccount() {
 }
 
 .action-button--danger {
-  background: transparent;
-  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-color: rgba(248, 113, 113, 0.4);
   color: #fca5a5;
 }
 
@@ -371,7 +369,7 @@ async function onDeleteAccount() {
 
 .danger-body {
   font-size: 13px;
-  color: rgba(240, 237, 230, 0.55);
+  color: rgba(255, 255, 255, 0.45);
   margin: 0 0 16px;
   line-height: 1.55;
 }

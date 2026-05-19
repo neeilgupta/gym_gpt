@@ -1,19 +1,34 @@
 <template>
   <main class="nutrition-page">
-    <h1 style="margin: 0 0 10px;">Nutrition</h1>
-    <p style="margin: 0 0 18px; opacity: 0.8;">
-      Generate and iterate meal plans independently of training.
-    </p>
+    <section class="nutrition-shell">
+      <aside class="nutrition-rail">
+        <p class="rail-kicker">Nutrition</p>
+        <h1 class="page-title">Build your meal plan</h1>
+        <p class="page-sub">
+          Set your calories, diet, allergies, and meals per day.
+        </p>
+        <div class="rail-list">
+          <div class="rail-item"><span></span>Calories and macros</div>
+          <div class="rail-item"><span></span>Diet and allergies</div>
+          <div class="rail-item"><span></span>Saves when signed in</div>
+        </div>
+      </aside>
+
+      <div class="nutrition-workspace glass-card">
+        <div class="form-header">
+          <div class="form-pill">Nutrition</div>
+          <h2>Nutrition plan</h2>
+          <p>Calculate your target or enter your own, then generate meals.</p>
+        </div>
 
         <!-- Maintenance calories guidance -->
     <section class="ll-card ll-card-muted">
       <div style="font-weight: 800; margin-bottom: 6px;">
-        How to find your maintenance calories
+        Need your maintenance calories?
       </div>
 
       <p style="margin: 0 0 10px; line-height: 1.5; opacity: 0.9;">
-        Estimate your daily maintenance calories using a TDEE calculator, then enter that number
-        in <strong>Maintenance Calories</strong> below.
+        Use a calorie calculator if you do not know your maintenance number yet.
       </p>
 
       <ul style="margin: 0 0 10px; padding-left: 18px; line-height: 1.5;">
@@ -201,7 +216,7 @@
     </div>
 
     <div style="grid-column: span 12; font-size: 12px; opacity: 0.75;">
-      Uses the Diet/Allergies/Meals-per-day inputs below for generation.
+      Uses the diet, allergies, and meals per day below.
     </div>
   </div>
 
@@ -349,7 +364,7 @@
           @click="onNutritionRegenerate"
           :style="buttonStyle(!nutritionSnapshot || nutritionLoading)"
         >
-          {{ nutritionLoading ? "Working…" : "Regenerate (diff)" }}
+          {{ nutritionLoading ? "Working…" : "Regenerate" }}
         </button>
       </div>
 
@@ -357,10 +372,10 @@
       <LLLoadingPanel
         v-if="nutritionLoading"
         title="Generating nutrition"
-        subtitle="Fail-closed: diet + allergens enforced deterministically"
+        subtitle="Building meals from your inputs."
         :elapsed="nutritionElapsedSeconds"
         :steps="nutritionSteps"
-        hint="These are daily aims + an example plan (not food tracking). Same inputs → same output."
+        hint="Use this as a starting point, not food tracking."
       />
 
       <div v-if="nutritionError" style="color:#b00020; font-size: 13px; margin-top: 10px;">
@@ -369,12 +384,15 @@
 
     </section>
 
+      </div>
+    </section>
+
         <!-- Generated meals -->
     <section v-if="nutritionOutput" class="ll-card">
       <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom: 10px;">
         <div style="font-weight: 800;">Meal Plan</div>
         <div style="opacity: 0.7; font-size: 13px;">
-          {{ (nutritionOutput.accepted?.length ?? 0) }} accepted • {{ (nutritionOutput.rejected?.length ?? 0) }} rejected
+          {{ (nutritionOutput.accepted?.length ?? 0) }} meals
         </div>
       </div>
 
@@ -401,14 +419,11 @@
 
         </div>
 
-        <button class="debug-toggle" type="button" @click="showDebug = !showDebug">
-          {{ showDebug ? "Hide debug" : "Show debug" }}
-        </button>
       </div>
 
 
       <div v-if="!nutritionOutput.accepted || nutritionOutput.accepted.length === 0" style="opacity: 0.75;">
-        No accepted meals returned. Try increasing batch size or loosening constraints.
+        No meals returned. Try fewer allergies or a different diet.
       </div>
 
       <div v-else>
@@ -431,11 +446,6 @@
 
                 <div style="font-weight: 700; margin-bottom: 6px;">
                 {{ meal.name }}
-                <div v-if="showDebug" style="font-size: 11px; opacity: 0.6; margin-bottom: 6px;">
-                  template_key: {{ meal.template_key || "—" }} • key: {{ meal.key || "—" }}
-                </div>
-
-
                 </div>
 
                 
@@ -452,7 +462,7 @@
                   <span v-else>—</span>
 
                   <div v-if="boosterIngredientNames(meal).length" style="margin-top: 6px; font-size: 12px; opacity: 0.75;">
-                    <span style="font-weight: 700; color: #7c3aed;">Adjustments:</span>
+                    <span style="font-weight: 700; color: rgba(255,255,255,0.65);">Adjustments:</span>
                     <span>{{ boosterIngredientNames(meal).join(", ") }}</span>
                   </div>
                 </div>
@@ -499,17 +509,6 @@
             </div>
         </div>
     </div>
-
-      <details v-if="nutritionOutput.rejected && nutritionOutput.rejected.length" style="margin-top: 12px;">
-        <summary style="cursor: pointer; font-weight: 600;">
-          Rejected meals ({{ nutritionOutput.rejected.length }})
-        </summary>
-        <ul style="margin: 10px 0 0; padding-left: 18px; line-height: 1.5;">
-          <li v-for="(meal, idx) in nutritionOutput.rejected" :key="meal.template_key || meal.key || meal.name || idx">
-            {{ meal.name }}
-          </li>
-        </ul>
-      </details>
     </section>
 
     <!-- Skeleton Meal Plan while loading (only if no output yet) -->
@@ -529,26 +528,6 @@
     </section>
 
 
-    <!-- Diff / Explanations -->
-    <section class="ll-card">
-      <NutritionDiff :explanations="nutritionExplanations" :version="nutritionSnapshot?.version ?? null" />
-    </section>
-
-    <!-- Raw JSON -->
-    <section v-if="nutritionSnapshot" class="ll-card">
-      <div style="font-weight: 800; margin-bottom: 8px;">Raw JSON</div>
-
-      <details style="margin-bottom: 10px;">
-        <summary style="cursor: pointer; font-weight: 600;">Version snapshot</summary>
-        <pre style="white-space: pre-wrap; margin-top: 8px;">{{ pretty(nutritionSnapshot) }}</pre>
-      </details>
-
-      <details v-if="nutritionOutput">
-        <summary style="cursor: pointer; font-weight: 600;">Output</summary>
-        <pre style="white-space: pre-wrap; margin-top: 8px;">{{ pretty(nutritionOutput) }}</pre>
-      </details>
-    </section>
-
     <p v-else style="opacity: 0.7;">
       No nutrition generated yet. Click “Generate nutrition”.
     </p>
@@ -557,13 +536,11 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import NutritionDiff from "../components/NutritionDiff.vue";
 import LLLoadingPanel from "../components/LLLoadingPanel.vue";
 import { useNutritionApi, type NutritionTargets, type MacroCalcResponse } from "../../services/nutrition";
 
 const { generateNutrition, regenerateNutrition, macroCalc } = useNutritionApi();
 
-const showDebug = ref(false)
 const nutritionLoading = ref(false);
 // --- premium loading UX (status text + elapsed time)
 const nutritionStartedAtMs = ref<number | null>(null);
@@ -573,10 +550,10 @@ let nutritionTimer: number | null = null;
 const nutritionElapsedSeconds = computed(() => nutritionElapsedSec.value);
 
 const nutritionSteps = [
-  "Selecting meals for each slot",
-  "Enforcing diet + allergens (fail-closed)",
-  "Repairing calories (slot-aware boosters)",
-  "Snapshotting version + preparing diffs",
+  "Reading your inputs",
+  "Choosing meals",
+  "Checking diet and allergies",
+  "Saving your plan",
 ];
 
 watch(nutritionLoading, (isLoading) => {
@@ -919,10 +896,6 @@ const macroAims = computed(() => {
 
 
 
-function pretty(x: any) {
-  return JSON.stringify(x, null, 2);
-}
-
 function isBooster(ing: any): boolean {
   const t = String(ing?.type || "").toLowerCase().trim();
   return t === "booster" || t === "adjustment";
@@ -955,12 +928,13 @@ function boosterIngredientNames(meal: any): string[] {
 
 function buttonStyle(disabled: boolean) {
   return {
-    padding: "8px 12px",
-    borderRadius: "10px",
-    border: "1px solid #ddd",
-    background: "white",
+    padding: "9px 18px",
+    borderRadius: "6px",
+    border: "1px solid rgba(255,255,255,0.55)",
+    background: "transparent",
+    color: "#ffffff",
     cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.6 : 1,
+    opacity: disabled ? 0.45 : 1,
   } as any;
 }
 
@@ -1096,22 +1070,8 @@ async function onMacroCalc() {
   try {
     const totalIn = inchesFromFtIn(macroHeightFt.value, macroHeightIn.value);
 
-    // ===== BLOCK 0 DEBUG: MACRO CALC (payload + conversions) =====
-    const heightCmDebug = cmFromInches(totalIn);
-    const weightKgDebug = kgFromLb(macroWeightLb.value);
-
-    console.log("[BLOCK 0] Macro Calc — frontend inputs + converted payload", {
-      sex: macroSex.value,
-      age: macroAge.value,
-      height_ft: macroHeightFt.value,
-      height_in: macroHeightIn.value,
-      total_inches: totalIn,
-      height_cm: heightCmDebug,
-      weight_lb: macroWeightLb.value,
-      weight_kg: weightKgDebug,
-      activity_level: macroActivity.value,
-    });
-    // ============================================================
+    const heightCm = cmFromInches(totalIn);
+    const weightKg = kgFromLb(macroWeightLb.value);
 
     // Fail-closed frontend validation (keeps UI errors clean)
     if (totalIn <= 0) throw new Error("Height must be > 0.");
@@ -1121,8 +1081,8 @@ async function onMacroCalc() {
     const res = await macroCalc({
       sex: macroSex.value,
       age: macroAge.value,
-      height_cm: heightCmDebug,
-      weight_kg: weightKgDebug,
+      height_cm: heightCm,
+      weight_kg: weightKg,
       activity_level: macroActivity.value,
     });
 
@@ -1213,79 +1173,163 @@ async function onNutritionRegenerate() {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
 :global(html),
 :global(body) {
-  background: #090907;
+  background: #0a0a0a;
   margin: 0;
 }
 
 :global(#__nuxt) {
-  background: #090907;
+  background: #0a0a0a;
   min-height: 100vh;
 }
 
 .nutrition-page {
-  --amber: #7c3aed;
-  --bg: #090907;
-  --surface: #111110;
-  --surface-2: #191917;
   --border: rgba(255, 255, 255, 0.07);
-  --text: #f0ede6;
-  --text-dim: rgba(240, 237, 230, 0.42);
+  --text: #ffffff;
+  --text-dim: rgba(255, 255, 255, 0.35);
 
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(rgba(124, 58, 237, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.025) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background: #0a0a0a;
   color: var(--text);
-  padding: 40px 48px;
+  padding: 38px 32px 72px;
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
 }
 
 .nutrition-page > * {
-  max-width: 1400px;
+  max-width: 1180px;
   margin-left: auto;
   margin-right: auto;
 }
 
-/* Page heading override */
-.nutrition-page > h1 {
-  font-family: 'Syne', sans-serif !important;
-  font-size: 32px !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.03em !important;
-  color: var(--text) !important;
+.nutrition-shell {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.72fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 18px;
 }
 
-.nutrition-page > p {
-  font-family: 'DM Mono', monospace !important;
-  font-size: 12px !important;
-  color: var(--text-dim) !important;
-  opacity: 1 !important;
-  letter-spacing: 0.02em !important;
+.nutrition-rail {
+  position: sticky;
+  top: 78px;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  padding: 34px;
+  background: #111111;
 }
 
-/* === CRITICAL: Override all white-background inline-styled form elements === */
+.rail-kicker,
+.form-pill {
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  margin: 0 0 14px;
+}
+
+.page-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(28px, 4.2vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0 0 16px;
+  color: #ffffff;
+  max-width: 100%;
+}
+
+.page-sub {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  max-width: 480px;
+}
+
+.rail-list {
+  display: grid;
+  gap: 11px;
+  margin-top: 24px;
+}
+
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+}
+
+.rail-item span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.glass-card {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  background: #111111;
+  padding: 30px;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-pill {
+  margin: 0 auto 12px;
+}
+
+.form-header h2 {
+  margin: 0 0 8px;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.form-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+}
+
+/* Override all white-background inline-styled form elements */
 .nutrition-page input,
 .nutrition-page select,
 .nutrition-page textarea {
-  background: var(--surface-2) !important;
-  border: 1px solid var(--border) !important;
-  color: var(--text) !important;
-  border-radius: 3px !important;
+  min-height: 40px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  border-radius: 4px !important;
   font-family: 'DM Sans', sans-serif !important;
+  font-size: 13px !important;
 }
 
 .nutrition-page input:focus,
 .nutrition-page select:focus,
 .nutrition-page textarea:focus {
-  border-color: var(--amber) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.07) !important;
+  box-shadow: none !important;
 }
 
 .nutrition-page input:disabled,
@@ -1297,38 +1341,36 @@ async function onNutritionRegenerate() {
 
 .nutrition-page input::placeholder,
 .nutrition-page textarea::placeholder {
-  color: rgba(240, 237, 230, 0.25) !important;
+  color: rgba(255, 255, 255, 0.25) !important;
 }
 
 .nutrition-page option {
-  background: #191917;
-  color: #f0ede6;
+  background: #111111;
+  color: #ffffff;
 }
 
 /* Card wrapper */
 .ll-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid rgba(124, 58, 237, 0.35);
-  border-radius: 4px;
+  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
   padding: 18px 20px;
   margin-bottom: 14px;
 }
 
 .ll-card-muted {
-  background: #0f0f0d;
-  border-left-color: rgba(124, 58, 237, 0.12);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 /* Card section headings with inline font-weight: 800 */
 .ll-card > div[style*="font-weight: 800"],
 .ll-card > div[style*="font-weight:800"] {
   font-family: 'DM Mono', monospace !important;
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 500 !important;
   letter-spacing: 0.1em !important;
   text-transform: uppercase !important;
-  color: var(--text-dim) !important;
+  color: rgba(255, 255, 255, 0.35) !important;
   margin-bottom: 14px !important;
 }
 
@@ -1340,18 +1382,18 @@ async function onNutritionRegenerate() {
   letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
   opacity: 1 !important;
-  color: var(--text-dim) !important;
+  color: rgba(255, 255, 255, 0.35) !important;
 }
 
 /* Maintenance link */
 .ll-card a[href] {
-  color: var(--amber) !important;
-  opacity: 0.8;
-  transition: opacity 0.15s;
+  color: rgba(255, 255, 255, 0.65) !important;
+  text-decoration: underline;
+  transition: color 0.15s;
 }
 
 .ll-card a[href]:hover {
-  opacity: 1;
+  color: #ffffff !important;
 }
 
 /* Error text inline style */
@@ -1369,41 +1411,40 @@ async function onNutritionRegenerate() {
 
 /* Meal cards */
 .meal-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
   padding: 14px;
-  transition: border-color 0.15s, transform 0.12s;
+  transition: border-color 0.15s;
 }
 
 .meal-card:hover {
-  border-color: rgba(124, 58, 237, 0.35);
-  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .booster-badge {
   font-size: 10px;
   font-weight: 500;
   font-family: 'DM Mono', monospace;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 2px;
-  border: 1px solid rgba(124, 58, 237, 0.3);
-  background: rgba(124, 58, 237, 0.06);
-  color: rgba(124, 58, 237, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
   letter-spacing: 0.04em;
 }
 
 .meal-card__detail-panel {
-  background: var(--surface-2);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
   padding: 10px;
 }
 
-/* === Buttons using buttonStyle() — override via attribute selector === */
+/* Buttons using buttonStyle() — override via attribute selector */
 .nutrition-page button[style] {
-  background: var(--amber) !important;
-  border: none !important;
-  border-radius: 3px !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  border-radius: 6px !important;
   color: #ffffff !important;
   font-family: 'DM Mono', monospace !important;
   font-size: 11px !important;
@@ -1411,16 +1452,16 @@ async function onNutritionRegenerate() {
   letter-spacing: 0.07em !important;
   text-transform: uppercase !important;
   padding: 9px 16px !important;
-  transition: background 0.15s, opacity 0.15s !important;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s !important;
 }
 
 .nutrition-page button[style]:hover:not(:disabled) {
-  background: #6d28d9 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .nutrition-page button[style]:disabled {
-  background: var(--amber) !important;
-  opacity: 0.4 !important;
+  opacity: 0.45 !important;
   cursor: not-allowed !important;
 }
 
@@ -1431,9 +1472,9 @@ async function onNutritionRegenerate() {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  border: 1px solid rgba(124, 58, 237, 0.12);
-  background: rgba(124, 58, 237, 0.03);
-  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
   margin: 10px 0 14px;
 }
 
@@ -1443,59 +1484,36 @@ async function onNutritionRegenerate() {
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.35);
   margin-bottom: 6px;
 }
 
 .totals-sub {
   font-size: 13px;
-  color: var(--text);
+  color: #ffffff;
   line-height: 1.7;
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
-  padding: 1px 7px;
+  padding: 1px 6px;
   border-radius: 2px;
-  border: 1px solid rgba(124, 58, 237, 0.25);
-  background: rgba(124, 58, 237, 0.06);
-  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
   font-family: 'DM Mono', monospace;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.02em;
   margin: 0 2px;
 }
 
-.debug-toggle {
-  appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(240, 237, 230, 0.45);
-  padding: 7px 12px;
-  border-radius: 3px;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.debug-toggle:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(240, 237, 230, 0.85);
-}
-
-/* Details/summary global */
+/* Details/summary */
 details {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 4px;
   padding: 10px 12px;
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 details summary {
@@ -1503,16 +1521,43 @@ details summary {
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   letter-spacing: 0.05em;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 @media (max-width: 900px) {
   .nutrition-page {
     padding: 24px 18px;
   }
+
+  .nutrition-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .nutrition-rail {
+    position: static;
+    min-height: auto;
+  }
 }
 
-/* === Loading skeleton === */
+@media (max-width: 560px) {
+  .nutrition-page {
+    padding: 18px 12px 64px;
+  }
+
+  .nutrition-rail {
+    display: none;
+  }
+
+  .glass-card {
+    padding: 22px 16px;
+  }
+
+  .nutrition-page button[style] {
+    width: 100%;
+  }
+}
+
+/* Loading skeleton */
 .ll-skel-meals {
   display: grid;
   gap: 10px;
@@ -1521,12 +1566,12 @@ details summary {
 .ll-skel-row {
   height: 54px;
   border-radius: 4px;
-  border: 1px solid rgba(124, 58, 237, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   background: linear-gradient(
     90deg,
-    rgba(124, 58, 237, 0.03),
-    rgba(124, 58, 237, 0.07),
-    rgba(124, 58, 237, 0.03)
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.03)
   );
   background-size: 200% 100%;
   animation: ll-shimmer 1.4s ease-in-out infinite;

@@ -1,244 +1,136 @@
 <template>
-  <main class="plan-detail-page">    <nav style="margin-bottom: 16px;">
-      <NuxtLink to="/" class="nav-link">← Back to home</NuxtLink>
-      <span style="margin: 0 10px;">·</span>
-      <NuxtLink to="/generate" class="nav-link">Generate another plan</NuxtLink>
-      <span style="margin: 0 10px;">·</span>
-      <NuxtLink to="/plans" class="nav-link">All plans</NuxtLink>
-    </nav>
+  <main class="plan-detail-page">
+    <section v-if="pending" class="status-panel">Loading plan...</section>
+    <section v-else-if="errorMsg" class="status-panel error">{{ errorMsg }}</section>
 
-    <!-- ========================= -->
-    <!-- Phase 2: Version Bar (Always Visible) -->
-    <!-- ========================= -->
-    <div class="version-bar"
-    >
-      <div style="font-weight: 800;">
-        Version
-        <span style="opacity: 0.7; font-weight: 600;">
-          — viewing v{{ selectedVersionNumber ?? ((plan as any)?.version ?? "?") }}
-          <template v-if="selectedVersion?.is_restored && selectedVersion?.restored_from">
-            (restored from v{{ selectedVersion.restored_from }})
-          </template>
-          <template v-else-if="selectedVersionNumber != null && selectedVersionNumber === latestVersionNumber">
-            (latest)
-          </template>
-        </span>
-      </div>
+    <section v-else-if="selectedOutput" class="plan-workspace">
+      <aside class="history-rail">
+        <NuxtLink to="/plans" class="back-link">&larr; All plans</NuxtLink>
 
-      <div style="display:flex; gap:8px; align-items:center;">
-        <select
-          v-model.number="selectedVersionNumber"
-          :disabled="versionsPending"
-          class="version-select"
-        >
-          <option v-if="versionsPending" :value="null">Loading versions…</option>
-          <option v-else-if="!versions.length" :value="null">No versions</option>
+        <div>
+          <div class="eyebrow">Plan</div>
+          <div class="mono plan-id">p_{{ id }}</div>
+        </div>
 
-          <option v-for="v in versions" :key="v.version" :value="v.version">
-            v{{ v.version }}
-            <template v-if="v.is_restored && v.restored_from">
-              (restored from v{{ v.restored_from }})
-            </template>
-            <template v-else-if="v.version === latestVersionNumber">
-              (latest)
-            </template>
-          </option>
-        </select>
-
-        <button
-          v-if="selectedVersionNumber != null && selectedVersionNumber !== latestVersionNumber"
-          :disabled="restoring || versionsPending"
-          @click="restoreSelected"
-            class="restore-button"        >
-          {{ restoring ? "Restoring…" : "Restore this version" }}
-        </button>
-
-        <span v-if="versionsError" style="color:#b00020; font-size: 13px;">
-          {{ versionsError }}
-        </span>
-      </div>
-    </div>
-
-
-    <p v-if="pending">Loading plan…</p>
-    <p v-else-if="errorMsg" style="color: red;">{{ errorMsg }}</p>
-
-    <section v-else-if="selectedOutput">
-      <div style="display: flex; gap: 14px; align-items: flex-start;">
-        <!-- LEFT -->
-        <div style="flex: 1; min-width: 0;">
-      <PlanViewer :plan="selectedOutput">
-        <template #after-notes>
-          <!-- Input / constraints / preferences (text only) -->
-          <div
-            v-if="inputConstraints.length || preferenceLines.length || constraintTokens.length || preferenceTokens.length"
-            class="notes-card"
+        <div class="history-block">
+          <div class="eyebrow history-label">History</div>
+          <div v-if="versionsPending" class="rail-note">Loading versions...</div>
+          <div v-else-if="!versions.length" class="rail-note">No versions yet.</div>
+          <button
+            v-for="v in versions"
+            v-else
+            :key="v.version"
+            type="button"
+            :class="['version-row', { active: v.version === selectedVersionNumber }]"
+            @click="selectedVersionNumber = v.version"
           >
-            <h3 style="margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7;">
-              Preferences (informational)
-            </h3>
+            <span class="mono version-num">v{{ v.version }}</span>
+            <span class="version-copy">
+              <span>{{ versionNote(v) }}</span>
+              <span class="mono version-time">{{ formatVersionTime(v.created_at) }}</span>
+            </span>
+            <span v-if="v.version === latestVersionNumber" class="pill accent">NOW</span>
+          </button>
+        </div>
 
-            <div v-if="constraintTokens.length" style="margin-bottom: 8px;">
-              <div style="opacity: 0.8; font-size: 13px; margin-bottom: 4px;">Constraint Tokens</div>
-              <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                <li v-for="(c, i) in constraintTokens" :key="`ct-${i}`">{{ c }}</li>
-              </ul>
-            </div>
+        <p v-if="versionsError" class="rail-error">{{ versionsError }}</p>
+      </aside>
 
-            <div v-if="preferenceTokens.length" style="margin-bottom: 8px;">
-              <div style="opacity: 0.8; font-size: 13px; margin-bottom: 4px;">Preference Tokens</div>
-              <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                <li v-for="(p, i) in preferenceTokens" :key="`pt-${i}`">{{ p }}</li>
-              </ul>
-            </div>
-
-            <div v-if="inputConstraints.length" style="margin-bottom: 8px;">
-              <div style="opacity: 0.8; font-size: 13px; margin-bottom: 4px;">Constraints (raw)</div>
-              <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                <li v-for="(c, i) in inputConstraints" :key="`c-${i}`">{{ c }}</li>
-              </ul>
-            </div>
-
-            <div v-if="preferenceLines.length">
-              <div style="opacity: 0.8; font-size: 13px; margin-bottom: 4px;">Flags</div>
-              <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                <li v-for="(p, i) in preferenceLines" :key="`p-${i}`">{{ p }}</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- What changed (diff) -->
-          <div
-            v-if="displayDiff !== null"
-            class="diff-card"
-          >
-            <div style="font-weight: 800; margin-bottom: 6px;">What changed</div>
-
-            <div v-if="displayDiff.replaced_exercises?.length">
-              <div style="font-weight: 700; font-size: 13px; margin: 8px 0 4px;">Replaced</div>
-              <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                <li v-for="(r, i) in displayDiff.replaced_exercises" :key="`rep-${i}`">
-                  Day {{ (r.day ?? 0) + 1 }}
-                  ({{ r.block }} #{{ (r.slot ?? 0) + 1 }}):
-                  <code>{{ r.from }}</code> → <code>{{ r.to }}</code>
-                </li>
-              </ul>
-            </div>
-
-            <div v-if="displayDiff.added_exercises?.length">
-              <div style="font-weight: 700; font-size: 13px; margin: 8px 0 4px;">Added</div>
-              <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                <li v-for="(a, i) in displayDiff.added_exercises" :key="`add-${i}`">
-                  Day {{ (a.day ?? 0) + 1 }} ({{ a.block }} #{{ (a.slot ?? 0) + 1 }}):
-                  <code>{{ a.name }}</code>
-                </li>
-              </ul>
-            </div>
-
-            <div v-if="displayDiff.removed_exercises?.length">
-              <div style="font-weight: 700; font-size: 13px; margin: 8px 0 4px;">Removed</div>
-              <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                <li v-for="(r, i) in displayDiff.removed_exercises" :key="`rem-${i}`">
-                  Day {{ (r.day ?? 0) + 1 }} ({{ r.block }} #{{ (r.slot ?? 0) + 1 }}):
-                  <code>{{ r.name }}</code>
-                </li>
-              </ul>
-            </div>
-
-            <div
-              v-if="
-                !displayDiff.replaced_exercises?.length &&
-                !displayDiff.removed_exercises?.length &&
-                !displayDiff.added_exercises?.length
-              "
-              style="opacity: 0.7; font-size: 13px;"
-            >
-              No changes detected.
-            </div>
-          </div>
-        </template>
-      </PlanViewer>
-    </div>
-
-    <!-- RIGHT -->
-    <div style="width: 380px; min-width: 320px;">
-      <!-- ========================= -->
-      <!-- Phase 1: Chat Panel -->
-      <!-- ========================= -->
-      <section class="chat-panel">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;">
+      <section class="plan-main">
+        <header class="plan-header">
           <div>
-            <div style="font-weight: 800;">Chat</div>
-            <div style="opacity: 0.7; font-size: 13px;">
-              Adjust the plan. Example: <code>no barbells</code>, <code>prefer cables</code>, <code>avoid shoulders</code>
-            </div>
+            <div class="eyebrow">Workout plan</div>
+            <h1>{{ selectedOutput.title }}</h1>
           </div>
-          <div style="opacity: 0.7; font-size: 13px;">
-            v{{ selectedVersionNumber ?? ((plan as any)?.version ?? "?") }}
+
+          <div class="header-actions">
+            <button
+              v-if="selectedVersionNumber != null && selectedVersionNumber !== latestVersionNumber"
+              type="button"
+              class="btn secondary"
+              :disabled="restoring || versionsPending"
+              @click="restoreSelected"
+            >
+              {{ restoring ? "Restoring..." : `Restore v${selectedVersionNumber}` }}
+            </button>
+            <button type="button" class="btn primary" @click="focusComposer">Edit plan</button>
           </div>
+        </header>
+
+        <PlanViewer
+          :plan="selectedOutput"
+          :input="selectedInput"
+          :diff="displayDiff"
+          :version="selectedVersionNumber"
+          :selected-day="selectedDay"
+          @update:selected-day="selectedDay = $event"
+        />
+      </section>
+
+      <aside class="chat-rail">
+        <header class="chat-head">
+          <div class="eyebrow">Edit</div>
+          <span class="pill">v{{ selectedVersionNumber ?? ((plan as any)?.version ?? "?") }}</span>
+        </header>
+
+        <div class="quick-edits">
+          <button type="button" @click="insertQuickEdit('avoid shoulders')">Avoid shoulders</button>
+          <button type="button" @click="insertQuickEdit('no barbells')">No barbells</button>
+          <button type="button" @click="insertQuickEdit('prefer cables')">Prefer cables</button>
         </div>
 
-        <!-- Messages -->
         <div ref="chatScrollEl" class="chat-messages">
-          <div v-if="!chatHistory.length" style="opacity: 0.7; font-size: 13px; padding: 10px;">
-            No edits yet — send a message to start.
+          <div v-if="!chatHistory.length" class="empty-chat">
+            No edits yet. Send a message to start.
           </div>
 
-          <div v-for="(m, i) in chatHistory" :key="`ch-${i}`" style="margin-bottom: 10px;">
-            <div style="display: flex; justify-content: flex-end;">
-              <div class="chat-message">
-                <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">You</div>
-                <div style="white-space: pre-wrap; word-break: break-word;">{{ m.message }}</div>
-                <div style="opacity: 0.6; font-size: 12px; margin-top: 6px;">
-                  {{ formatChatTime(m.created_at) }}
-                </div>
-
-                <!-- Optional: patch preview -->
-                <details style="margin-top: 8px;">
-                  <summary style="cursor: pointer; opacity: 0.75; font-size: 12px;">patch</summary>
-                  <pre style="margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 12px;">
-      {{ JSON.stringify(m.patch, null, 2) }}
-                  </pre>
-                </details>
-              </div>
+          <article v-for="(m, i) in chatHistory" :key="`ch-${i}`" class="chat-msg">
+            <div class="chat-meta">
+              <span class="mono who">you</span>
+              <span class="mono">{{ formatChatTime(m.created_at) }}</span>
             </div>
-          </div>
+            <div class="chat-bubble">{{ m.message }}</div>
+          </article>
         </div>
 
-        <!-- Composer -->
-        <div style="margin-top: 10px;">
+        <footer class="composer">
           <textarea
+            ref="composerEl"
             v-model="editMessage"
             rows="3"
-            placeholder="Type an adjustment…"
+            placeholder="e.g. swap barbell rows for cables"
             class="chat-textarea"
+            @keydown.meta.enter.prevent="sendEditAndApply()"
+            @keydown.ctrl.enter.prevent="sendEditAndApply()"
           />
-          <div style="display: flex; gap: 10px; margin-top: 8px; align-items: center;">
+          <div class="composer-row">
+            <span class="mono send-hint">Cmd+Enter to send</span>
             <button
+              type="button"
+              class="btn primary"
               :disabled="editPending || applyPending || !editMessage.trim()"
               @click="sendEditAndApply()"
-              class="send-button"
             >
-              {{ (editPending || applyPending) ? "Working…" : "Send" }}
+              {{ (editPending || applyPending) ? "Working..." : "Send" }}
             </button>
-
-            <span v-if="appliedOk" style="color: #137333; font-size: 13px;">Applied ✓</span>
-            <span v-if="editError" style="color: #b00020; font-size: 13px;">{{ editError }}</span>
-            <span v-if="applyError" style="color: #b00020; font-size: 13px;">{{ applyError }}</span>
           </div>
-        </div>
-      </section>
-    </div>
-  </div>
-</section>
+          <div v-if="appliedOk || editError || applyError" class="composer-status">
+            <span v-if="appliedOk" class="inline-success">Applied</span>
+            <span v-if="editError" class="inline-error">{{ editError }}</span>
+            <span v-if="applyError" class="inline-error">{{ applyError }}</span>
+          </div>
+        </footer>
+      </aside>
+    </section>
 
-    <p v-else>No plan data found.</p>
+    <section v-else class="status-panel">No plan data found.</section>
   </main>
 </template>
 
 <script setup lang="ts">
 definePageMeta({ layout: "plan" });
-import { computed, ref, watch } from "vue";
+
+import { computed, nextTick, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { usePlans } from "../../../composables/usePlans";
 import { useRuntimeConfig } from "#imports";
@@ -276,15 +168,54 @@ type VersionItem = {
   restored_from?: number | null;
 };
 
+type EditPlanResponseT = {
+  can_apply: boolean;
+  proposed_patch: {
+    constraints_add: string[];
+    constraints_remove: string[];
+    preferences_add: string[];
+    preferences_remove: string[];
+    emphasis: string | null;
+    avoid: string[];
+    set_style: "low" | "standard" | "high" | null;
+    rep_style: "strength" | "hypertrophy" | "pump" | null;
+  };
+  change_summary: string[];
+  errors: string[];
+};
+
 const route = useRoute();
 const id = computed(() => String(route.params.id));
 const { getPlan } = usePlans();
 
-const { data: plan, pending, error, refresh} = await useAsyncData(
+const { data: plan, pending, error, refresh } = await useAsyncData(
   () => `plan-${id.value}`,
-  () => getPlan(id.value)
+  () => getPlan(id.value),
 );
 
+const selectedDay = ref(0);
+const composerEl = ref<HTMLTextAreaElement | null>(null);
+const chatScrollEl = ref<HTMLElement | null>(null);
+
+const editMessage = ref("");
+const editPending = ref(false);
+const appliedOk = ref(false);
+const editError = ref<string | null>(null);
+const editResponse = ref<EditPlanResponseT | null>(null);
+const applyPending = ref(false);
+const applyError = ref<string | null>(null);
+const applyResponse = ref<any>(null);
+const lastDiff = ref<any | null>(null);
+
+const versions = ref<VersionItem[]>([]);
+const selectedVersionNumber = ref<number | null>(null);
+const restoring = ref(false);
+const versionsPending = ref(false);
+const versionsError = ref<string | null>(null);
+const versionsReqToken = ref(0);
+
+const config = useRuntimeConfig();
+const apiBase = (config.public as any)?.apiBase ?? "http://127.0.0.1:8000";
 
 const errorMsg = computed(() => {
   const e: any = error.value;
@@ -294,9 +225,7 @@ const errorMsg = computed(() => {
 const output = computed<PlanOutput | null>(() => {
   const p = plan.value as PlanDetail | null;
   if (!p) return null;
-
   if (p.output?.weekly_split) return p.output;
-
   if ((p as any).weekly_split) {
     return {
       title: (p as any).title ?? "Workout Plan",
@@ -315,124 +244,47 @@ const input = computed<any>(() => {
 });
 
 const chatHistory = computed<any[]>(() => {
-  const h = (plan.value as any)?.input?.chat_history;
+  const h = selectedInput.value?.chat_history ?? (plan.value as any)?.input?.chat_history;
   return Array.isArray(h) ? h : [];
 });
 
-const chatScrollEl = ref<HTMLElement | null>(null);
-
-function scrollChatToBottom() {
-  const el = chatScrollEl.value;
-  if (!el) return;
-  el.scrollTop = el.scrollHeight;
-}
-
-watch(
-  () => id.value,
-  () => {
-    lastDiff.value = null;
-    applyResponse.value = null;
-    applyError.value = null;
-    editResponse.value = null;
-    editError.value = null;
-    editMessage.value = "";
-    versions.value = [];
-    selectedVersionNumber.value = null;
-    fetchVersions();
-  }
-);
-
-
-function formatChatTime(iso: any) {
-  if (!iso) return ""
-  try {
-    const d = new Date(String(iso))
-    return d.toLocaleString()
-  } catch {
-    return String(iso)
-  }
-}
-
-
-const constraintTokens = computed<string[]>(() => {
-  const t = (selectedInput.value as any)?.constraints_tokens;
-  return Array.isArray(t) ? t.map(String).filter(Boolean) : [];
+const latestVersionNumber = computed(() => {
+  if (!versions.value.length) return (plan.value as any)?.version ?? null;
+  return Math.max(...versions.value.map((v) => v.version));
 });
 
-const preferenceTokens = computed<string[]>(() => {
-  const t = (selectedInput.value as any)?.preferences_tokens;
-  return Array.isArray(t) ? t.map(String).filter(Boolean) : [];
+const selectedVersion = computed<VersionItem | null>(() => {
+  if (selectedVersionNumber.value == null) return null;
+  return versions.value.find((v) => v.version === selectedVersionNumber.value) ?? null;
 });
 
-
-const inputConstraints = computed<string[]>(() => {
-  const i = selectedInput.value
-  if (!i) return []
-
-  // ✅ Prefer raw base text if present
-  const raw = i.base_constraints_text ?? null
-  const c = raw && String(raw).trim().length ? raw : i.constraints
-
-  if (!c) return []
-  if (Array.isArray(c)) return c.map(String).filter(Boolean)
-  if (typeof c === "string") return c.split("\n").map(s => s.trim()).filter(Boolean)
-  return [String(c)]
-})
-
-const preferenceLines = computed<string[]>(() => {
-  const i = selectedInput.value;
-
-  if (!i) return [];
-
-  const out: string[] = [];
-
-  if (i.prefer_machines !== undefined && i.prefer_machines !== null) {
-    out.push(`prefer_machines: ${String(i.prefer_machines)}`);
-  }
-  if (i.include_sharms !== undefined && i.include_sharms !== null) {
-    out.push(`include_sharms: ${String(i.include_sharms)}`);
-  }
-  if (i.barbell_avoidance !== undefined && i.barbell_avoidance !== null) {
-    out.push(`barbell_avoidance: ${String(i.barbell_avoidance)}`);
-  }
-
-
-
-  return out;
+const selectedOutput = computed<PlanOutput | null>(() => {
+  const sv = selectedVersion.value;
+  if (sv?.output?.weekly_split) return sv.output as PlanOutput;
+  return output.value;
 });
 
-type EditPlanResponseT = {
-  can_apply: boolean;
-  proposed_patch: {
-    constraints_add: string[];
-    constraints_remove: string[];
-    preferences_add: string[];
-    preferences_remove: string[];
-    emphasis: string | null;
-    avoid: string[];
-    set_style: "low" | "standard" | "high" | null;
-    rep_style: "strength" | "hypertrophy" | "pump" | null;
-  };
-  change_summary: string[];
-  errors: string[];
-};
+const selectedInput = computed<any>(() => {
+  const sv = selectedVersion.value;
+  if (sv?.input) return sv.input;
+  return input.value;
+});
 
-const editMessage = ref("");
-const editPending = ref(false);
-const appliedOk = ref(false)
-const editError = ref<string | null>(null);
-const editResponse = ref<EditPlanResponseT | null>(null);
-const applyPending = ref(false);
-const applyError = ref<string | null>(null);
-const applyResponse = ref<any>(null);
-const lastDiff = ref<any | null>(null)
-  
+const displayDiff = computed<any | null>(() => {
+  const sv = selectedVersion.value;
+  const selNum = selectedVersionNumber.value;
 
+  if (selNum != null && sv) {
+    if (sv.diff !== undefined) return sv.diff ?? null;
+    return null;
+  }
+
+  return lastDiff.value;
+});
 
 const hasRealPatch = computed(() => {
   const p = editResponse.value?.proposed_patch;
   if (!p) return false;
-
   return (
     (p.constraints_add?.length ?? 0) > 0 ||
     (p.constraints_remove?.length ?? 0) > 0 ||
@@ -445,9 +297,26 @@ const hasRealPatch = computed(() => {
   );
 });
 
+watch(
+  () => id.value,
+  () => {
+    lastDiff.value = null;
+    applyResponse.value = null;
+    applyError.value = null;
+    editResponse.value = null;
+    editError.value = null;
+    editMessage.value = "";
+    selectedDay.value = 0;
+    versions.value = [];
+    selectedVersionNumber.value = null;
+    fetchVersions();
+  },
+);
 
-const config = useRuntimeConfig();
-const apiBase = (config.public as any)?.apiBase ?? "http://127.0.0.1:8000";
+watch(chatHistory, async () => {
+  await nextTick();
+  scrollChatToBottom();
+});
 
 function authedPlanFetch<T = any>(path: string, options: any = {}) {
   return $fetch<T>(`${apiBase}${path}`, {
@@ -456,79 +325,22 @@ function authedPlanFetch<T = any>(path: string, options: any = {}) {
   });
 }
 
-
-const versions = ref<VersionItem[]>([]);
-const selectedVersionNumber = ref<number | null>(null);
-const restoring = ref(false);
-const versionsPending = ref(false);
-const versionsError = ref<string | null>(null);
-const versionsReqToken = ref(0);
-
-const latestVersionNumber = computed(() => {
-  if (!versions.value.length) return (plan.value as any)?.version ?? null;
-  return Math.max(...versions.value.map(v => v.version));
-});
-
-const selectedVersion = computed<VersionItem | null>(() => {
-  if (selectedVersionNumber.value == null) return null;
-  return versions.value.find(v => v.version === selectedVersionNumber.value) ?? null;
-});
-
-const selectedOutput = computed<PlanOutput | null>(() => {
-  // Prefer selected snapshot if available
-  const sv = selectedVersion.value;
-  if (sv?.output?.weekly_split) return sv.output as PlanOutput;
-
-  // Fallback to latest plan output (existing behavior)
-  return output.value;
-});
-
-const selectedInput = computed<any>(() => {
-  const sv = selectedVersion.value;
-  if (sv?.input) return sv.input;
-  return input.value;
-});
-
-// Diff to show in UI:
-// - if viewing a snapshot, show its stored diff
-// - otherwise show the last apply diff (immediate feedback)
-// Diff rules:
-// - If user has selected a specific version: show THAT version's persisted diff (even if null).
-// - Only fall back to lastDiff for *latest* when selected version has no diff yet (immediate feedback).
-const displayDiff = computed<any | null>(() => {
-  const sv = selectedVersion.value;
-  const selNum = selectedVersionNumber.value;
-
-  if (selNum != null && sv) {
-    // snapshot mode: never leak lastDiff from a different selection
-    if (sv.diff !== undefined) return sv.diff ?? null;
-    return null;
-  }
-
-  return lastDiff.value;
-});
-
-
 async function fetchVersions(opts?: { keepSelection?: boolean }) {
   const keepSelection = opts?.keepSelection ?? false;
-
   versionsPending.value = true;
   versionsError.value = null;
-
   const token = ++versionsReqToken.value;
 
   try {
     const res: any = await authedPlanFetch(`/plans/${id.value}/versions`);
-    if (token !== versionsReqToken.value) return; // ignore stale response
+    if (token !== versionsReqToken.value) return;
 
     const items: VersionItem[] = res.items ?? res ?? [];
     versions.value = [...items].sort((a, b) => b.version - a.version);
 
     const latest = versions.value[0]?.version ?? null;
-
-    // Default selection = latest (unless explicitly keeping selection and it still exists)
     if (keepSelection && selectedVersionNumber.value != null) {
-      const stillExists = versions.value.some(v => v.version === selectedVersionNumber.value);
+      const stillExists = versions.value.some((v) => v.version === selectedVersionNumber.value);
       if (!stillExists) selectedVersionNumber.value = latest;
     } else {
       selectedVersionNumber.value = latest;
@@ -545,7 +357,6 @@ async function fetchVersions(opts?: { keepSelection?: boolean }) {
 
 await fetchVersions();
 
-
 async function restoreSelected() {
   if (!selectedVersion.value) return;
 
@@ -558,14 +369,8 @@ async function restoreSelected() {
       method: "POST",
       body: { version: v },
     });
-
-    // 1) pull newest versions first (so we can select latest deterministically)
     await fetchVersions({ keepSelection: false });
-
-    // 2) refresh plan detail (latest output / chat_history)
     await refresh();
-
-    // 3) avoid leaking prior apply diff into snapshot mode
     lastDiff.value = null;
   } catch (e: any) {
     versionsError.value = e?.data?.detail ?? e?.message ?? String(e);
@@ -573,7 +378,6 @@ async function restoreSelected() {
     restoring.value = false;
   }
 }
-
 
 async function applyPatch() {
   applyError.value = null;
@@ -587,7 +391,7 @@ async function applyPatch() {
   if (!hasRealPatch.value) {
     applyError.value = "No real changes to apply yet.";
     return;
-}
+  }
 
   applyPending.value = true;
   try {
@@ -595,38 +399,28 @@ async function applyPatch() {
       method: "POST",
       body: patch,
     });
-
-    // show immediate response (optional)
     applyResponse.value = res;
     lastDiff.value = (res as any)?.diff ?? null;
-
-
-    // refresh the plan content (new version)
     await refresh();
     await fetchVersions({ keepSelection: false });
     lastDiff.value = null;
     appliedOk.value = true;
     setTimeout(() => (appliedOk.value = false), 1500);
-
-    // ✅ clear editor UI so it doesn't show stale state
     editMessage.value = "";
     editResponse.value = null;
     editError.value = null;
     applyError.value = null;
   } catch (e: any) {
-    const d = e?.data?.detail;
-    applyResponse.value = d ?? e?.data ?? null;
+    applyResponse.value = e?.data?.detail ?? e?.data ?? null;
     applyError.value = e?.data?.detail ?? e?.message ?? String(e);
   } finally {
     applyPending.value = false;
   }
 }
 
-
 async function sendEdit() {
   editError.value = null;
   editResponse.value = null;
-
   applyResponse.value = null;
   applyError.value = null;
 
@@ -635,11 +429,10 @@ async function sendEdit() {
 
   editPending.value = true;
   try {
-    const res = await authedPlanFetch<EditPlanResponseT>(`/plans/${id.value}/edit`, {
+    editResponse.value = await authedPlanFetch<EditPlanResponseT>(`/plans/${id.value}/edit`, {
       method: "POST",
       body: { message: msg },
     });
-    editResponse.value = res;
   } catch (e: any) {
     editError.value = e?.data?.detail ?? e?.message ?? String(e);
   } finally {
@@ -658,7 +451,6 @@ async function sendEditAndApply() {
   applyPending.value = true;
 
   try {
-    // 1) EDIT
     const res = await authedPlanFetch<EditPlanResponseT>(`/plans/${id.value}/edit`, {
       method: "POST",
       body: { message: msg },
@@ -667,7 +459,7 @@ async function sendEditAndApply() {
     editResponse.value = res;
 
     if (!res?.can_apply) {
-      editError.value = (res?.errors?.[0] ?? "No actionable changes detected.");
+      editError.value = res?.errors?.[0] ?? "No actionable changes detected.";
       return;
     }
 
@@ -684,22 +476,16 @@ async function sendEditAndApply() {
 
     applyResponse.value = applyRes;
     lastDiff.value = (applyRes as any)?.diff ?? null;
-
-
-    // 3) Refresh plan (pulls updated output + chat_history)
     await refresh();
     await fetchVersions({ keepSelection: false });
     lastDiff.value = null;
 
     appliedOk.value = true;
     setTimeout(() => (appliedOk.value = false), 1500);
-
-    // clear composer
     editMessage.value = "";
     editResponse.value = null;
   } catch (e: any) {
     const msg = e?.data?.detail ?? e?.message ?? String(e);
-    // decide whether it was edit vs apply by which part has a response
     if (!editResponse.value) editError.value = msg;
     else applyError.value = msg;
   } finally {
@@ -708,206 +494,506 @@ async function sendEditAndApply() {
   }
 }
 
+function focusComposer() {
+  composerEl.value?.focus();
+}
+
+function insertQuickEdit(message: string) {
+  editMessage.value = message;
+  focusComposer();
+}
+
+function scrollChatToBottom() {
+  const el = chatScrollEl.value;
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
+}
+
+function formatChatTime(iso: any) {
+  if (!iso) return "";
+  try {
+    return new Date(String(iso)).toLocaleString([], {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return String(iso);
+  }
+}
+
+function formatVersionTime(iso: any) {
+  if (!iso) return "";
+  try {
+    return new Date(String(iso)).toLocaleString([], {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return String(iso);
+  }
+}
+
+function versionNote(v: VersionItem) {
+  if (v.is_restored && v.restored_from) return `Restored from v${v.restored_from}`;
+  const diff = v.diff;
+  if (diff?.restored_from) return `Restored from v${diff.restored_from}`;
+  const added = Array.isArray(diff?.added_exercises) ? diff.added_exercises.length : 0;
+  const replaced = Array.isArray(diff?.replaced_exercises) ? diff.replaced_exercises.length : 0;
+  const removed = Array.isArray(diff?.removed_exercises) ? diff.removed_exercises.length : 0;
+  const total = added + replaced + removed;
+  if (total > 0) return `${added} added · ${replaced} replaced · ${removed} removed`;
+  return v.version === 1 ? "Generated" : "Updated plan";
+}
 </script>
+
 <style scoped>
-/* Global dark theme setup */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap");
+
 :global(html),
 :global(body) {
-  background: #0b0f19;
+  background: #0a0a0a;
   margin: 0;
 }
 
 :global(#__nuxt) {
-  background: #0b0f19;
+  background: #0a0a0a;
   min-height: 100vh;
 }
 
 .plan-detail-page {
-  --accent: #7c3aed;
-  --accent-dark: #6d28d9;
-  --ink: #f8fafc;
-  --muted: #a1a1aa;
-  --page: #0b0f19;
-  --surface: #111827;
-  --surface-2: #0f172a;
-  --border: rgba(255,255,255,0.10);
-  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --ll-bg: #0a0a0a;
+  --ll-surface: #111111;
+  --ll-surface-2: #0f0f0f;
+  --ll-tint: rgba(255, 255, 255, 0.04);
+  --ll-ink: #ffffff;
+  --ll-muted: rgba(255, 255, 255, 0.45);
+  --ll-faint: rgba(255, 255, 255, 0.25);
+  --ll-border: rgba(255, 255, 255, 0.08);
+  --ll-accent: rgba(255, 255, 255, 0.7);
+  --ll-accent-tint: rgba(255, 255, 255, 0.06);
+  --ll-accent-line: rgba(255, 255, 255, 0.15);
+  --ll-ok: #4ade80;
+  --ll-ok-tint: rgba(74, 222, 128, 0.08);
+  --ll-bad: #f87171;
+  --ll-bad-tint: rgba(248, 113, 113, 0.08);
+  --ll-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --ll-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  background: var(--page);
-  color: var(--ink);
-  padding: 32px 48px;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  max-width: 1500px;
-  margin: 0 auto;
-  min-height: 100vh;
+  background: var(--ll-bg);
+  color: var(--ll-ink);
+  font-family: var(--ll-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: calc(100vh - 54px);
 }
 
-/* Navigation links */
-.nav-link {
-  color: rgba(255,255,255,0.88);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 140ms ease;
+.plan-workspace {
+  background: var(--ll-bg);
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 320px;
+  height: calc(100vh - 54px);
+  min-height: 680px;
 }
 
-.nav-link:hover {
-  color: var(--accent);
+.history-rail,
+.plan-main,
+.chat-rail {
+  min-height: 0;
+  overflow: auto;
 }
 
-/* Version bar */
-.version-bar {
-  margin-bottom: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  background: var(--surface);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-  box-shadow: var(--shadow);
-}
-
-.version-select {
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--ink);
-  font-family: inherit;
-  font-size: 14px;
-}
-
-.restore-button {
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 140ms ease, box-shadow 140ms ease;
-}
-
-.restore-button:hover:not(:disabled) {
-  background: var(--accent-dark);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
-}
-
-.restore-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Notes card */
-.notes-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 14px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-/* Diff card */
-.diff-card {
-  margin-bottom: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-/* Day card */
-.day-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 14px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-/* Chat panel */
-.chat-panel {
-  position: sticky;
-  top: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  height: calc(100vh - 140px);
+.history-rail {
+  border-right: 0.5px solid var(--ll-border);
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  gap: 18px;
+  padding: 20px 16px;
+}
+
+.plan-main {
+  padding: 24px 32px;
+}
+
+.chat-rail {
+  background: var(--ll-surface-2);
+  border-left: 0.5px solid var(--ll-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.mono,
+.eyebrow {
+  font-family: var(--ll-mono);
+}
+
+.eyebrow {
+  color: var(--ll-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.back-link {
+  color: var(--ll-muted);
+  font-family: var(--ll-mono);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--ll-accent);
+}
+
+.plan-id {
+  color: var(--ll-ink);
+  display: block;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.history-label {
+  margin-bottom: 10px;
+}
+
+.history-block {
+  min-width: 0;
+}
+
+.rail-note,
+.rail-error {
+  color: var(--ll-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.rail-error {
+  color: var(--ll-bad);
+}
+
+.version-row {
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--ll-muted);
+  cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  gap: 10px;
+  padding: 8px 9px;
+  text-align: left;
+  width: 100%;
+}
+
+.version-row:hover,
+.version-row.active {
+  background: var(--ll-tint);
+}
+
+.version-row.active .version-num {
+  color: var(--ll-accent);
+}
+
+.version-row.active .version-copy > span:first-child {
+  color: var(--ll-ink);
+}
+
+.version-num {
+  flex: 0 0 24px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+.version-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font-size: 11.5px;
+  gap: 2px;
+  line-height: 1.4;
+  min-width: 0;
+}
+
+.version-time {
+  color: var(--ll-faint);
+  font-size: 10px;
+}
+
+.pill {
+  align-items: center;
+  background: var(--ll-tint);
+  border: 0.5px solid var(--ll-border);
+  border-radius: 4px;
+  color: var(--ll-ink);
+  display: inline-flex;
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  height: 20px;
+  letter-spacing: 0.04em;
+  padding: 0 7px;
+  white-space: nowrap;
+}
+
+.pill.accent {
+  background: var(--ll-accent-tint);
+  border-color: var(--ll-accent-line);
+  color: var(--ll-accent);
+  font-size: 9.5px;
+  height: 16px;
+  padding: 0 5px;
+}
+
+.plan-header {
+  align-items: center;
+  border-bottom: 0.5px solid var(--ll-border);
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+}
+
+.plan-header h1 {
+  color: var(--ll-ink);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  margin: 6px 0 0;
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn {
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: var(--ll-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  height: 28px;
+  letter-spacing: 0.02em;
+  padding: 0 12px;
+  transition: background 120ms ease-out, border-color 120ms ease-out, opacity 120ms ease-out;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn.primary {
+  background: var(--ll-ink);
+  border: 0;
+  color: var(--ll-bg);
+}
+
+.btn.secondary {
+  background: transparent;
+  border: 0.5px solid var(--ll-border);
+  color: var(--ll-ink);
+}
+
+.chat-head {
+  align-items: center;
+  border-bottom: 0.5px solid var(--ll-border);
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+
+.quick-edits {
+  border-bottom: 0.5px solid var(--ll-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.quick-edits button {
+  background: var(--ll-accent-tint);
+  border: 0.5px solid var(--ll-accent-line);
+  border-radius: 4px;
+  color: var(--ll-accent);
+  cursor: pointer;
+  font-family: var(--ll-mono);
+  font-size: 10.5px;
+  height: 24px;
+  padding: 0 7px;
 }
 
 .chat-messages {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 14px;
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px;
-  background: var(--surface-2);
+  padding: 16px 18px;
 }
 
-.chat-message {
-  max-width: 85%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px;
+.empty-chat {
+  color: var(--ll-muted);
+  font-size: 12.5px;
+}
+
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-meta {
+  align-items: center;
+  color: var(--ll-faint);
+  display: flex;
+  gap: 8px;
+  font-size: 9.5px;
+}
+
+.chat-meta .who {
+  color: var(--ll-accent);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chat-bubble {
+  background: var(--ll-bg);
+  border: 0.5px solid var(--ll-border);
+  border-radius: 5px;
+  color: var(--ll-ink);
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.composer {
+  border-top: 0.5px solid var(--ll-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
 }
 
 .chat-textarea {
-  width: 100%;
+  background: var(--ll-bg);
+  border: 0.5px solid var(--ll-border);
+  border-radius: 5px;
+  box-sizing: border-box;
+  color: var(--ll-ink);
+  font-family: var(--ll-sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  outline: none;
   padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.4;
-  background: var(--surface-2);
-  color: var(--ink);
-  resize: vertical;
-  transition: border-color 140ms ease;
+  resize: none;
+  width: 100%;
 }
 
 .chat-textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  border-color: var(--ll-accent-line);
 }
 
 .chat-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--ll-faint);
 }
 
-.send-button {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 140ms ease, box-shadow 140ms ease;
+.composer-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.send-button:hover:not(:disabled) {
-  background: var(--accent-dark);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+.send-hint {
+  color: var(--ll-faint);
+  font-size: 10px;
 }
 
-.send-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.composer-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-@media (max-width: 900px) {
-  .plan-detail-page {
-    padding: 20px 16px;
+.inline-error,
+.inline-success {
+  font-size: 12px;
+}
+
+.inline-error {
+  color: var(--ll-bad);
+}
+
+.inline-success {
+  color: var(--ll-ok);
+}
+
+.status-panel {
+  align-items: center;
+  color: var(--ll-muted, #6b6b73);
+  display: flex;
+  font-family: var(--ll-sans, system-ui);
+  min-height: calc(100vh - 54px);
+  justify-content: center;
+}
+
+.status-panel.error {
+  color: #d93636;
+}
+
+@media (max-width: 1100px) {
+  .plan-workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - 54px);
+  }
+
+  .plan-main {
+    order: 1;
+  }
+
+  .history-rail {
+    border-bottom: 0.5px solid var(--ll-border);
+    border-right: 0;
+    order: 2;
+  }
+
+  .chat-rail {
+    border-left: 0;
+    border-top: 0.5px solid var(--ll-border);
+    min-height: 520px;
+    order: 3;
+  }
+}
+
+@media (max-width: 700px) {
+  .plan-main {
+    padding: 20px 14px;
+  }
+
+  .plan-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions,
+  .header-actions .btn {
+    width: 100%;
   }
 }
 </style>

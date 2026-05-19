@@ -50,8 +50,8 @@ onMounted(async () => {
       <div v-else-if="status === 'success'" class="state-box">
         <div class="check-wrap">
           <svg class="check-svg" viewBox="0 0 48 48" fill="none">
-            <circle cx="24" cy="24" r="22" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="138" stroke-dashoffset="138" class="check-circle"/>
-            <polyline points="14,25 21,32 34,17" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="30" stroke-dashoffset="30" class="check-mark"/>
+            <circle cx="24" cy="24" r="22" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="138" stroke-dashoffset="138" class="check-circle"/>
+            <polyline points="14,25 21,32 34,17" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="30" stroke-dashoffset="30" class="check-mark"/>
           </svg>
         </div>
         <p class="state-title">Email verified</p>
@@ -70,7 +70,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
 
 .page {
   min-height: 100vh;
@@ -78,30 +78,18 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background-color: #090907;
-  background-image:
-    linear-gradient(rgba(124, 58, 237, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.025) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background: #0a0a0a;
   font-family: 'DM Sans', sans-serif;
-  color: #f0ede6;
+  color: #ffffff;
 }
 
 .card {
   width: 100%;
   max-width: 420px;
-  background: #111110;
+  background: #111111;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-left: 3px solid #7c3aed;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 36px 32px;
-  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.4);
-  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 
 .brand {
@@ -109,17 +97,17 @@ onMounted(async () => {
 }
 
 .wordmark {
-  font-family: 'Syne', sans-serif;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin: 0;
-  color: #f0ede6;
+  color: #ffffff;
   line-height: 1;
 }
 
 .accent {
-  color: #7c3aed;
+  color: #ffffff;
 }
 
 /* State box */
@@ -139,9 +127,9 @@ onMounted(async () => {
 .spinner {
   width: 52px;
   height: 52px;
-  border: 2px solid rgba(255,255,255,0.06);
-  border-top-color: #7c3aed;
-  border-right-color: rgba(124, 58, 237, 0.4);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: #ffffff;
+  border-right-color: transparent;
   border-radius: 50%;
   animation: spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
@@ -196,11 +184,11 @@ onMounted(async () => {
 }
 
 .state-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 18px;
   font-weight: 700;
   margin: 0 0 8px;
-  color: #f0ede6;
+  color: #ffffff;
 }
 
 .error-title {
@@ -210,7 +198,7 @@ onMounted(async () => {
 .state-text {
   font-family: 'DM Mono', monospace;
   font-size: 12px;
-  color: rgba(240, 237, 230, 0.42);
+  color: rgba(255, 255, 255, 0.4);
   margin: 0;
   letter-spacing: 0.02em;
 }
@@ -230,19 +218,19 @@ onMounted(async () => {
 .link-btn {
   background: none;
   border: none;
-  color: #7c3aed;
+  color: rgba(255, 255, 255, 0.55);
   font-size: 12px;
   font-family: 'DM Mono', monospace;
   letter-spacing: 0.03em;
   cursor: pointer;
   padding: 0;
   text-decoration: none;
-  opacity: 0.8;
-  transition: opacity 0.15s;
+  opacity: 1;
+  transition: color 0.15s;
 }
 
 .link-btn:hover {
-  opacity: 1;
+  color: #ffffff;
   text-decoration: underline;
   text-underline-offset: 3px;
 }

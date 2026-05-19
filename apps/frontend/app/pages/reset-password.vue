@@ -105,7 +105,7 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
 
 .page {
   min-height: 100vh;
@@ -113,30 +113,18 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background-color: #090907;
-  background-image:
-    linear-gradient(rgba(124, 58, 237, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.025) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background: #0a0a0a;
   font-family: 'DM Sans', sans-serif;
-  color: #f0ede6;
+  color: #ffffff;
 }
 
 .card {
   width: 100%;
   max-width: 420px;
-  background: #111110;
+  background: #111111;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-left: 3px solid #7c3aed;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 36px 32px;
-  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.4);
-  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 
 .brand {
@@ -144,23 +132,23 @@ async function handleSubmit() {
 }
 
 .wordmark {
-  font-family: 'Syne', sans-serif;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin: 0 0 4px;
-  color: #f0ede6;
+  color: #ffffff;
   line-height: 1;
 }
 
 .accent {
-  color: #7c3aed;
+  color: #ffffff;
 }
 
 .sub {
   font-family: 'DM Mono', monospace;
   font-size: 12px;
-  color: rgba(240, 237, 230, 0.42);
+  color: rgba(255, 255, 255, 0.4);
   margin: 0;
   letter-spacing: 0.02em;
 }
@@ -178,38 +166,37 @@ async function handleSubmit() {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(240, 237, 230, 0.42);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .input {
-  background: #191917;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
   padding: 11px 14px;
-  color: #f0ede6;
+  color: #ffffff;
   font-size: 15px;
   font-family: 'DM Sans', sans-serif;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
   width: 100%;
   box-sizing: border-box;
 }
 
 .input:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.07);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .input::placeholder {
-  color: rgba(240, 237, 230, 0.25);
+  color: rgba(255, 255, 255, 0.25);
 }
 
 .btn-primary {
   width: 100%;
-  padding: 12px;
-  background: #7c3aed;
-  border: none;
-  border-radius: 3px;
+  padding: 11px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 6px;
   color: #ffffff;
   font-size: 12px;
   font-weight: 500;
@@ -218,7 +205,7 @@ async function handleSubmit() {
   text-transform: uppercase;
   cursor: pointer;
   margin-top: 4px;
-  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -226,7 +213,8 @@ async function handleSubmit() {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #6d28d9;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -241,7 +229,7 @@ async function handleSubmit() {
 .btn-spinner {
   width: 14px;
   height: 14px;
-  border: 1.5px solid rgba(10,10,8,0.3);
+  border: 1.5px solid rgba(255,255,255,0.2);
   border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -273,19 +261,18 @@ async function handleSubmit() {
 .link-btn {
   background: none;
   border: none;
-  color: #7c3aed;
+  color: rgba(255, 255, 255, 0.45);
   font-size: 12px;
   font-family: 'DM Mono', monospace;
   letter-spacing: 0.03em;
   cursor: pointer;
   padding: 0;
   text-decoration: none;
-  opacity: 0.8;
-  transition: opacity 0.15s;
+  transition: color 0.15s;
 }
 
 .link-btn:hover {
-  opacity: 1;
+  color: #ffffff;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -307,16 +294,16 @@ async function handleSubmit() {
 }
 
 .state-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 17px;
   font-weight: 700;
   margin: 0 0 10px;
-  color: #f0ede6;
+  color: #ffffff;
 }
 
 .state-text {
   font-size: 13px;
-  color: rgba(240, 237, 230, 0.55);
+  color: rgba(255, 255, 255, 0.45);
   margin: 0 0 18px;
   line-height: 1.6;
 }

@@ -71,11 +71,11 @@ const prettyElapsed = computed(() => {
 
 <style scoped>
 .ll-loading {
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-  background: rgba(17, 24, 39, 0.75);
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.35));
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #111111;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 14px;
 }
 
 .ll-loading__top {
@@ -83,66 +83,69 @@ const prettyElapsed = computed(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .ll-loading__title {
-  font-weight: 900;
+  font-weight: 600;
+  font-size: 14px;
   letter-spacing: -0.01em;
+  color: #ffffff;
 }
 
 .ll-loading__subtitle {
-  font-size: 13px;
-  opacity: 0.8;
-  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 3px;
 }
 
 .ll-loading__time {
-  font-size: 12px;
-  font-weight: 800;
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
   padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(167, 139, 250, 0.25);
-  background: rgba(124, 58, 237, 0.10);
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .ll-loading__bar {
-  height: 10px;
+  height: 2px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(
     90deg,
-    rgba(124, 58, 237, 0.18),
-    rgba(167, 139, 250, 0.35),
-    rgba(124, 58, 237, 0.18)
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.08)
   );
   background-size: 200% 100%;
   animation: ll-shimmer 1.2s ease-in-out infinite;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .ll-loading__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .ll-skel {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.06),
-    rgba(255, 255, 255, 0.11),
-    rgba(255, 255, 255, 0.06)
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.03)
   );
   background-size: 200% 100%;
   animation: ll-shimmer 1.2s ease-in-out infinite;
 }
 
 .skel--line {
-  height: 44px;
+  height: 36px;
 }
 
 .ll-loading__steps {
@@ -158,41 +161,42 @@ const prettyElapsed = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
-  opacity: 0.75;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .ll-step__dot {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  flex-shrink: 0;
 }
 
 .ll-step.is-active {
-  opacity: 1;
+  color: #ffffff;
 }
 
 .ll-step.is-active .ll-step__dot {
-  border-color: rgba(167, 139, 250, 0.65);
-  background: rgba(124, 58, 237, 0.35);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .ll-step.is-done {
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .ll-step.is-done .ll-step__dot {
-  border-color: rgba(34, 197, 94, 0.45);
-  background: rgba(34, 197, 94, 0.20);
+  border-color: rgba(74, 222, 128, 0.5);
+  background: rgba(74, 222, 128, 0.15);
 }
 
 .ll-loading__hint {
   margin-top: 12px;
-  font-size: 12px;
-  opacity: 0.8;
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
   line-height: 1.5;
 }
 

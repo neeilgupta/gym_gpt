@@ -1,15 +1,31 @@
 <template>
   <main class="generate-page">
-    <div class="page-header">
-      <h1 class="page-title">Generate Plan</h1>
-      <p class="page-sub">
-        Create a training program. Rules engine only — deterministic, no randomness.
-      </p>
-    </div>
+    <section class="generate-shell">
+      <aside class="generate-rail">
+        <p class="rail-kicker">Workout</p>
+        <h1 class="page-title">
+          Build your<br>
+          workout plan
+        </h1>
+        <p class="page-sub">
+          Choose your goal, equipment, schedule, and any muscles you want to focus on.
+        </p>
+        <div class="rail-list">
+          <div class="rail-item"><span></span>Fits your equipment</div>
+          <div class="rail-item"><span></span>Fits your session length</div>
+          <div class="rail-item"><span></span>Saves when signed in</div>
+        </div>
+      </aside>
 
-    <form @submit.prevent="onSubmit" class="generate-form">
+    <form @submit.prevent="onSubmit" class="generate-form glass-card">
+      <div class="form-header">
+        <div class="form-pill">Training</div>
+        <h2>Workout plan</h2>
+        <p>Fill out the basics and generate your plan.</p>
+      </div>
+
       <section class="ll-card">
-        <div class="card-heading">Training Parameters</div>
+        <div class="card-heading">Plan details</div>
 
         <div class="form-grid">
           <label class="form-field">
@@ -56,7 +72,7 @@
           Focus Muscles
           <span class="card-heading-optional">(optional)</span>
         </div>
-        <p class="focus-hint">Selected muscles are trained first each session and prioritised in exercise selection.</p>
+        <p class="focus-hint">Pick any muscles you want the plan to focus on.</p>
         <div class="muscle-chips">
           <button
             v-for="m in MUSCLE_OPTIONS"
@@ -71,7 +87,7 @@
 
       <section class="ll-card">
         <label class="form-field">
-          <span class="form-label">Notes / Preferences</span>
+          <span class="form-label">Notes</span>
           <textarea
             v-model="form.constraints"
             rows="6"
@@ -95,15 +111,16 @@
       <LLLoadingPanel
         v-if="loading"
         title="Generating your training plan"
-        subtitle="Deterministic rules engine — same inputs always produce the same output."
+        subtitle="This usually takes a few seconds."
         :elapsed="elapsedSeconds"
         :steps="trainingSteps"
-        hint="This can take ~15–20 seconds on cold start. No randomness, no AI source-of-truth."
+        hint="Cold starts can take a little longer."
       />
 
       <div v-if="error" class="error-message">{{ error }}</div>
       <PlanViewer v-if="result?.output" :plan="result.output" />
     </form>
+    </section>
   </main>
 </template>
 
@@ -170,10 +187,10 @@ let timer: number | null = null;
 const elapsedSeconds = computed(() => elapsedSec.value);
 
 const trainingSteps = [
-  "Locking inputs + split structure",
-  "Selecting exercises by equipment + goal",
-  "Building sets/reps + progression notes",
-  "Snapshotting version + preparing diffs",
+  "Reading your inputs",
+  "Choosing exercises",
+  "Building sets and reps",
+  "Saving your plan",
 ];
 
 watch(loading, (isLoading) => {
@@ -224,57 +241,104 @@ async function onSubmit() {
 
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 :global(html),
 :global(body) {
-  background: #090907;
+  background: #0a0a0a;
   margin: 0;
 }
 
 :global(#__nuxt) {
-  background: #090907;
+  background: #0a0a0a;
   min-height: 100vh;
 }
 
 .generate-page {
-  background-color: #090907;
-  background-image:
-    linear-gradient(rgba(124, 58, 237, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.025) 1px, transparent 1px);
-  background-size: 44px 44px;
-  color: #f0ede6;
-  padding: 40px 48px;
+  background: #0a0a0a;
+  color: #ffffff;
+  padding: 38px 32px;
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
 }
 
-.generate-page > * {
-  max-width: 860px;
+.generate-shell {
+  width: min(1220px, 100%);
   margin-left: auto;
   margin-right: auto;
+  display: grid;
+  grid-template-columns: minmax(390px, 0.68fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
 
-/* Page header */
-.page-header {
-  margin-bottom: 28px;
+.generate-rail {
+  position: sticky;
+  top: 78px;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  padding: 34px;
+  background: #111111;
+}
+
+.rail-kicker,
+.form-pill {
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  margin: 0 0 14px;
 }
 
 .page-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 32px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  margin: 0 0 6px;
-  color: #f0ede6;
+  font-family: 'DM Sans', sans-serif;
+  font-size: clamp(28px, 3.5vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0 0 16px;
+  color: #ffffff;
+  max-width: 100%;
 }
 
 .page-sub {
-  font-family: 'DM Mono', monospace;
-  font-size: 12px;
-  color: rgba(240, 237, 230, 0.4);
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.45);
   margin: 0;
-  letter-spacing: 0.02em;
+  max-width: 480px;
+}
+
+.rail-list {
+  display: grid;
+  gap: 11px;
+  margin-top: 24px;
+}
+
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 14px;
+}
+
+.rail-item span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
 }
 
 /* Form */
@@ -284,22 +348,51 @@ async function onSubmit() {
   gap: 14px;
 }
 
-.ll-card {
-  background: #111110;
+.glass-card {
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-left: 3px solid rgba(124, 58, 237, 0.4);
-  border-radius: 4px;
-  padding: 22px 20px;
+  border-radius: 6px;
+  background: #111111;
+  padding: 30px;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.form-pill {
+  margin: 0 auto 12px;
+}
+
+.form-header h2 {
+  margin: 0 0 8px;
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+
+.form-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 14px;
+}
+
+.ll-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  padding: 20px;
 }
 
 .card-heading {
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(240, 237, 230, 0.4);
-  margin-bottom: 18px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 16px;
 }
 
 /* Form grid */
@@ -325,30 +418,30 @@ async function onSubmit() {
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(240, 237, 230, 0.4);
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .form-input {
+  min-height: 42px;
   padding: 10px 14px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #191917;
-  color: #f0ede6;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
   font-size: 14px;
   font-family: 'DM Sans', sans-serif;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
   box-sizing: border-box;
   width: 100%;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.07);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .form-input::placeholder {
-  color: rgba(240, 237, 230, 0.25);
+  color: rgba(255, 255, 255, 0.25);
   font-size: 13px;
 }
 
@@ -362,15 +455,15 @@ async function onSubmit() {
   -webkit-appearance: none;
   -moz-appearance: none;
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(240,237,230,0.35)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.3)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
   padding-right: 38px;
 }
 
 .form-select option {
-  background: #191917;
-  color: #f0ede6;
+  background: #111111;
+  color: #ffffff;
 }
 
 textarea.form-input {
@@ -381,18 +474,18 @@ textarea.form-input {
 
 /* Generate button */
 .generate-button {
-  background: #7c3aed;
-  border: none;
-  border-radius: 3px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 6px;
   color: #ffffff;
   font-family: 'DM Mono', monospace;
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  padding: 13px 28px;
+  padding: 11px 24px;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
   width: fit-content;
   display: flex;
   align-items: center;
@@ -400,8 +493,8 @@ textarea.form-input {
 }
 
 .generate-button:hover:not(:disabled) {
-  background: #6d28d9;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .generate-button:disabled {
@@ -412,7 +505,7 @@ textarea.form-input {
 .btn-spinner {
   width: 14px;
   height: 14px;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
   border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -423,7 +516,6 @@ textarea.form-input {
   to { transform: rotate(360deg); }
 }
 
-/* Makes loading panel feel like part of the form flow */
 .generate-form :deep(.ll-loading) {
   margin-top: 6px;
 }
@@ -450,7 +542,7 @@ textarea.form-input {
 .focus-hint {
   font-family: 'DM Mono', monospace;
   font-size: 11px;
-  color: rgba(240, 237, 230, 0.3);
+  color: rgba(255, 255, 255, 0.25);
   margin: 0 0 14px;
   line-height: 1.5;
 }
@@ -463,10 +555,10 @@ textarea.form-input {
 
 .muscle-chip {
   padding: 5px 12px;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
-  color: rgba(240, 237, 230, 0.55);
+  color: rgba(255, 255, 255, 0.5);
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   letter-spacing: 0.04em;
@@ -476,14 +568,14 @@ textarea.form-input {
 }
 
 .muscle-chip:hover:not(:disabled) {
-  border-color: rgba(124, 58, 237, 0.5);
-  color: #f0ede6;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
 }
 
 .muscle-chip--active {
-  border-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.15);
-  color: #c4b5fd;
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .muscle-chip:disabled {
@@ -496,12 +588,40 @@ textarea.form-input {
     padding: 24px 18px;
   }
 
+  .generate-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .generate-rail {
+    position: static;
+    min-height: auto;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
 
   .form-field.full-width {
     grid-column: span 1;
+  }
+}
+
+@media (max-width: 560px) {
+  .generate-page {
+    padding: 18px 12px;
+  }
+
+  .generate-rail {
+    display: none;
+  }
+
+  .glass-card {
+    padding: 22px 16px;
+  }
+
+  .generate-button {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import copy
@@ -31,6 +32,8 @@ from models.plans import (
     RestorePlanRequest,
     PlanResponse,
     extract_restore_meta,
+    DayPlan,
+    ExerciseItem,
 )
 
 
@@ -55,6 +58,55 @@ def get_openai_client():
 
 
 # ---------- Prompting ----------
+
+GENERIC_WARMUP = [
+    "5 minutes light cardio (treadmill walk, bike, or jump rope)",
+    "10 arm circles forward and backward",
+    "10 bodyweight squats",
+    "5 cat-cow stretches",
+]
+
+
+def _deterministic_scaffold(req: GeneratePlanRequest) -> GeneratePlanResponse:
+    goal_display = {
+        "strength": "Strength-Focused",
+        "hypertrophy": "Hypertrophy",
+        "fat_loss": "Fat Loss",
+        "endurance": "Endurance",
+    }.get(req.goal, "Custom")
+
+    title = f"{req.days_per_week}-Day {goal_display} Plan"
+
+    equip_display = {
+        "full_gym": "full gym",
+        "dumbbells": "dumbbells only",
+        "bodyweight": "bodyweight only",
+    }.get(req.equipment, req.equipment)
+
+    summary = (
+        f"A {req.days_per_week}-day {goal_display.lower()} training plan "
+        f"designed for {req.session_minutes}-minute sessions with {equip_display} equipment."
+    )
+
+    weekly_split = []
+    for i in range(1, req.days_per_week + 1):
+        day = DayPlan(
+            day=f"Day {i}",
+            focus="",
+            warmup=list(GENERIC_WARMUP),
+            main=[],
+            accessories=[],
+        )
+        weekly_split.append(day)
+
+    return GeneratePlanResponse(
+        title=title,
+        summary=summary,
+        weekly_split=weekly_split,
+        progression_notes=[],
+        safety_notes=[],
+    )
+
 
 SYSTEM_PROMPT = """You are LyftLogic, a practical gym workout planner.
 Return ONLY valid JSON that matches the provided schema. No markdown. No extra keys.
@@ -110,135 +162,132 @@ Output requirements:
 """.strip()
 
 
+def normalize_openai_json_schema(node):
+    if isinstance(node, dict):
+        if node.get("type") == "object" and "properties" in node:
+            props = node["properties"]
+            node["additionalProperties"] = False
+            node["required"] = list(props.keys())
+        for v in node.values():
+            normalize_openai_json_schema(v)
+    elif isinstance(node, list):
+        for item in node:
+            normalize_openai_json_schema(item)
+
+
+def strip_estimate_fields(node: dict) -> None:
+    if not isinstance(node, dict):
+        return
+
+    props = node.get("properties")
+    if isinstance(props, dict):
+        for k in ("estimated_minutes_total", "estimated_minutes_note"):
+            props.pop(k, None)
+            if "required" in node and k in node["required"]:
+                node["required"].remove(k)
+
+        ws = props.get("weekly_split")
+        if isinstance(ws, dict) and "items" in ws:
+            item = ws["items"]
+            if isinstance(item, dict):
+                item_props = item.get("properties")
+                if isinstance(item_props, dict):
+                    item_props.pop("estimated_minutes", None)
+                    if "required" in item and "estimated_minutes" in item["required"]:
+                        item["required"].remove("estimated_minutes")
+
+    for v in node.values():
+        if isinstance(v, dict):
+            strip_estimate_fields(v)
+        elif isinstance(v, list):
+            for it in v:
+                if isinstance(it, dict):
+                    strip_estimate_fields(it)
+
+
 
 @router.post("/generate")
 def generate_plan(req: GeneratePlanRequest, user=Depends(get_optional_current_user), _=Depends(plan_rate_limit)):
-    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    llm_enabled = os.getenv("LLM_NARRATION_ENABLED", "0") == "1"
+    api_key = os.getenv("OPENAI_API_KEY")
 
-    # Use JSON schema guidance via response_format with strict JSON
-    schema = GeneratePlanResponse.model_json_schema()
-    schema["additionalProperties"] = False
+    plan = None
 
-    def normalize_openai_json_schema(node):
-        if isinstance(node, dict):
-            if node.get("type") == "object" and "properties" in node:
-                props = node["properties"]
-                node["additionalProperties"] = False
-                node["required"] = list(props.keys())
-            for v in node.values():
-                normalize_openai_json_schema(v)
-        elif isinstance(node, list):
-            for item in node:
-                normalize_openai_json_schema(item)
+    if llm_enabled and api_key:
+        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-    normalize_openai_json_schema(schema)
+        schema = GeneratePlanResponse.model_json_schema()
+        schema["additionalProperties"] = False
 
-    # Do not require runtime-estimated fields in LLM output
-    def strip_estimate_fields(node: dict) -> None:
-        if not isinstance(node, dict):
-            return
+        normalize_openai_json_schema(schema)
+        strip_estimate_fields(schema)
 
-        props = node.get("properties")
-        if isinstance(props, dict):
-            for k in ("estimated_minutes_total", "estimated_minutes_note"):
-                props.pop(k, None)
-                if "required" in node and k in node["required"]:
-                    node["required"].remove(k)
-
-            # nested weekly_split item
-            ws = props.get("weekly_split")
-            if isinstance(ws, dict) and "items" in ws:
-                item = ws["items"]
-                if isinstance(item, dict):
-                    item_props = item.get("properties")
-                    if isinstance(item_props, dict):
-                        item_props.pop("estimated_minutes", None)
-                        if "required" in item and "estimated_minutes" in item["required"]:
-                            item["required"].remove("estimated_minutes")
-
-        for v in node.values():
-            if isinstance(v, dict):
-                strip_estimate_fields(v)
-            elif isinstance(v, list):
-                for it in v:
-                    if isinstance(it, dict):
-                        strip_estimate_fields(it)
-
-    strip_estimate_fields(schema)
-
-    # ensure an OpenAI client is available when we actually need it
-    if not os.getenv("OPENAI_API_KEY"):
-        # Keep server bootable without an API key — fail only at call-time
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not set")
-
-    # ensure an OpenAI client is available when we actually need it
-    client_local = get_openai_client()
-
-    try:
-        resp = client_local.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": build_user_prompt(req)},
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "GeneratePlanResponse",
-                    "schema": schema,
-                    "strict": True,
+        try:
+            client_local = get_openai_client()
+            resp = client_local.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": build_user_prompt(req)},
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "GeneratePlanResponse",
+                        "schema": schema,
+                        "strict": True,
+                    },
                 },
-            },
-            temperature=0.4,
-        )
-        content = resp.choices[0].message.content
-        data = json.loads(content)
+                temperature=0.4,
+            )
+            content = resp.choices[0].message.content
+            data = json.loads(content)
 
-        plan = GeneratePlanResponse(**data)
-        plan = apply_rules_v1(plan=plan, req=req)
+            plan = GeneratePlanResponse(**data)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "LLM narration failed, falling back to deterministic scaffold",
+                exc_info=True,
+            )
 
-        # Build Phase 1 input_state (stored with version 1)
-        req_dict = req.model_dump()
+    if plan is None:
+        plan = _deterministic_scaffold(req)
 
-        input_state = {
-            **req_dict,
+    plan = apply_rules_v1(plan=plan, req=req)
 
-            # Phase 1 editable state (canonical tokens)
-            "constraints_tokens": [],
-            "preferences_tokens": [],
-            "avoid": [],
-            "emphasis": None,
-            "set_style": None,
-            "rep_style": None,
+    req_dict = req.model_dump()
 
-            # Preserve original user constraints text separately
-            "base_constraints_text": req_dict.get("constraints", "") or "",
-            "chat_history": [],
-        }
+    input_state = {
+        **req_dict,
 
-        # Effective constraints string that rules engine reads
-        input_state["constraints"] = input_state["base_constraints_text"]
+        "constraints_tokens": [],
+        "preferences_tokens": [],
+        "avoid": [],
+        "emphasis": None,
+        "set_style": None,
+        "rep_style": None,
 
-        saved = add_plan(
-            title=plan.title,
-            input_json=json.dumps(input_state),
-            output_json=plan.model_dump_json(),
-            owner_id=user["id"] if user else None,
-        )
+        "base_constraints_text": req_dict.get("constraints", "") or "",
+        "chat_history": [],
+    }
 
-        # Effective constraints string that rules engine reads
-        input_state["constraints"] = input_state["base_constraints_text"]
+    input_state["constraints"] = input_state["base_constraints_text"]
 
+    saved = add_plan(
+        title=plan.title,
+        input_json=json.dumps(input_state),
+        output_json=plan.model_dump_json(),
+        owner_id=user["id"] if user else None,
+    )
 
-        return PlanResponse(
-            plan_id=saved["id"],
-            version=1,
-            input=input_state,
-            output=plan.model_dump(),
-        )
+    input_state["constraints"] = input_state["base_constraints_text"]
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Plan generation failed: {e}")
+    return PlanResponse(
+        plan_id=saved["id"],
+        version=1,
+        input=input_state,
+        output=plan.model_dump(),
+    )
     
 @router.get("", summary="List saved plans")
 def list_saved_plans(

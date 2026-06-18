@@ -337,7 +337,6 @@ def _first_safe_filler(banned: set[str], req: GeneratePlanRequest) -> Optional[s
 
 def _enforce_avoid_shoulders(day: DayPlan, req: GeneratePlanRequest) -> None:
     flags = _notes_flags(req)
-    # REMOVE AFTER TEST: debug print to confirm flags and req.avoid
     if not flags.get("avoid_shoulders", False):
         return
 
@@ -524,8 +523,6 @@ def _trim_or_pad_movements(day: DayPlan, req: GeneratePlanRequest) -> None:
         return
 
     # 4) pad isolation-first (focus-matched), no duplicates
-    existing = {normalize_name(e.name) for e in (day.main + day.accessories)}
-
     existing = {normalize_name(e.name) for e in (day.main + day.accessories)}
 
     # ✅ SHARMS: only allow arm/shoulder isolations as fillers (no random lats/back)
@@ -989,7 +986,7 @@ def _template_slots(template_key: str, req: GeneratePlanRequest) -> Tuple[List[L
             LATERAL,
         ]
         if avoid_shoulders:
-            acc = [slot for slot in acc if slot is not LATERAL]
+            acc = [slot for slot in acc if slot != LATERAL]
         return main, acc
 
     if t == "FB_C":
@@ -1541,6 +1538,36 @@ def _enforce_equipment_from_notes(day, req) -> None:
     day.accessories = process_list(day.accessories)
 
 
+def _finalize_day(day, req, template_key):
+    _enforce_equipment_from_notes(day, req)
+    _enforce_strict_equipment(day, req)
+    _enforce_prefer_cables(day, req)
+    _enforce_barbell_priority(day, req)
+
+    for ex in (day.main + day.accessories):
+        ex.sets = _normalize_sets(ex.sets)
+        ex.reps = _normalize_reps(ex.name, ex.reps)
+        ex.rest_seconds = _normalize_rest_seconds(ex.name, ex.rest_seconds)
+        if "rpe" in _lc(ex.notes):
+            ex.notes = ""
+
+    if template_key != "CHEST_BACK":
+        _trim_or_pad_movements(day, req)
+        _dedupe_day(day)
+        _enforce_compound_cap(day, req.session_minutes)
+        _enforce_strict_equipment(day, req)
+
+    _enforce_avoid_shoulders(day, req)
+    _dedupe_day(day)
+    _enforce_strict_equipment(day, req)
+
+    _enforce_session_minutes(day, req)
+    _dedupe_day(day)
+    _enforce_strict_equipment(day, req)
+    _enforce_session_minutes(day, req)
+    _enforce_strict_equipment(day, req)
+
+
 # -----------------------------
 # rules engine
 # -----------------------------
@@ -1606,43 +1633,7 @@ def apply_rules_v1(plan: GeneratePlanResponse, req: GeneratePlanRequest) -> Gene
             _ensure_hamstring_day_squat(day)
         if req.focus_muscles:
             _prioritize_focus_exercises(day, req.focus_muscles)
-        _enforce_equipment_from_notes(day, req)
-        _enforce_strict_equipment(day, req)
-        _enforce_prefer_cables(day, req)
-
-
-        # Enforce barbell preference in main (minimal)
-        _enforce_barbell_priority(day, req)
-
-        # Normalize all exercises
-        for ex in (day.main + day.accessories):
-            ex.sets = _normalize_sets(ex.sets)
-            ex.reps = _normalize_reps(ex.name, ex.reps)
-            ex.rest_seconds = _normalize_rest_seconds(ex.name, ex.rest_seconds)
-
-            # notes: remove any RPE-like content if it snuck in
-            nl = _lc(ex.notes)
-            if "rpe" in nl:
-                ex.notes = ""
-
-        # Enforce movement counts by time bucket
-
-        if template_key != "CHEST_BACK":
-            _trim_or_pad_movements(day, req)
-            _dedupe_day(day)
-            _enforce_compound_cap(day, req.session_minutes) 
-            _enforce_strict_equipment(day, req)
-        
-        _enforce_avoid_shoulders(day, req)
-        _dedupe_day(day)
-        _enforce_strict_equipment(day, req)
-
-        # Deterministic time enforcement against session_minutes
-        _enforce_session_minutes(day, req)
-        _dedupe_day(day)
-        _enforce_strict_equipment(day, req)
-        _enforce_session_minutes(day, req)
-        _enforce_strict_equipment(day, req)
+        _finalize_day(day, req, template_key)
 
         
         
